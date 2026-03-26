@@ -41,6 +41,28 @@ public abstract class Tarea {
         this.fechaCreacion = LocalDateTime.now();
     }
 
+    /**
+     * Constructor de reconstrucción: usa un ID fijo leído desde el archivo
+     * en lugar de autoincrementar. Solo lo usan las subclases al cargar datos.
+     */
+    protected Tarea(int id, String titulo, String descripcion,
+                    Prioridad prioridad, LocalDateTime fechaCreacion) {
+        this.id           = id;
+        this.titulo       = titulo;
+        this.descripcion  = descripcion;
+        this.prioridad    = prioridad;
+        this.estado       = Estado.PENDIENTE;
+        this.fechaCreacion = fechaCreacion;
+    }
+
+    /**
+     * Sincroniza el contador automático de IDs al valor indicado.
+     * Llamar después de cargar datos desde archivo para evitar duplicados.
+     */
+    public static void resetContador(int nuevoValor) {
+        contadorId.set(nuevoValor);
+    }
+
     // ─── Métodos Abstractos ────────────────────────────────────────────────
     // Las subclases OBLIGATORIAMENTE deben implementar estos métodos.
 

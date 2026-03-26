@@ -18,6 +18,14 @@ public class TareaSimple extends Tarea {
         super(titulo, descripcion, prioridad);
     }
 
+    /**
+     * Constructor de reconstrucción desde archivo (conserva el ID original).
+     */
+    public TareaSimple(int id, String titulo, String descripcion,
+                       Prioridad prioridad, java.time.LocalDateTime fechaCreacion) {
+        super(id, titulo, descripcion, prioridad, fechaCreacion);
+    }
+
     // ─── Implementación de métodos abstractos ──────────────────────────────
 
     @Override

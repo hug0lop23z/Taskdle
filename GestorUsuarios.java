@@ -1,4 +1,3 @@
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -10,6 +9,9 @@ import java.util.Map;
  *
  * El acceso en HashMap es O(1) para búsquedas, inserciones y eliminaciones,
  * lo que lo hace ideal para este tipo de "base de datos" ligera.
+ *
+ * Persistencia: los datos se cargan desde datos.csv al iniciar y se
+ * guardan automáticamente tras cada modificación relevante.
  */
 public class GestorUsuarios {
 
@@ -17,7 +19,8 @@ public class GestorUsuarios {
     private final Map<String, Usuario> usuarios;
 
     public GestorUsuarios() {
-        this.usuarios = new HashMap<>();
+        // Cargar datos persistidos desde archivo al arrancar
+        this.usuarios = PersistenciaArchivo.cargar();
     }
 
     /**
@@ -29,6 +32,7 @@ public class GestorUsuarios {
             return false;
         }
         usuarios.put(nombreUsuario, new Usuario(nombreUsuario, contrasena));
+        guardarDatos(); // Persistir inmediatamente
         return true;
     }
 
@@ -50,5 +54,21 @@ public class GestorUsuarios {
 
     public int getTotalUsuarios() {
         return usuarios.size();
+    }
+
+    /**
+     * Retorna la referencia interna al Usuario (para uso del servidor web).
+     * No usar para autenticación; usar autenticar() para eso.
+     */
+    public Usuario getUsuario(String nombreUsuario) {
+        return usuarios.get(nombreUsuario);
+    }
+
+    /**
+     * Guarda todos los datos actuales en el archivo de persistencia.
+     * Llamar después de cualquier cambio en tareas de un usuario.
+     */
+    public void guardarDatos() {
+        PersistenciaArchivo.guardar(usuarios);
     }
 }

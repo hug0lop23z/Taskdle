@@ -12,10 +12,12 @@ public class MenuTareas {
 
     private static final DateTimeFormatter FMT_FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    private final Usuario usuario;
+    private final Usuario       usuario;
+    private final GestorUsuarios gestorUsuarios;
 
-    public MenuTareas(Usuario usuario) {
-        this.usuario = usuario;
+    public MenuTareas(Usuario usuario, GestorUsuarios gestorUsuarios) {
+        this.usuario        = usuario;
+        this.gestorUsuarios = gestorUsuarios;
     }
 
     // ─── Bucle principal ──────────────────────────────────────────────────
@@ -32,6 +34,7 @@ public class MenuTareas {
                 case 4 -> eliminarTarea();
                 case 5 -> filtrarTareas();
                 case 6 -> verEstadisticas();
+                case 7 -> listarTareasOrdenadas();
                 case 0 -> activo = false;
                 default -> { Consola.error("Opción no válida."); Consola.pausar(); }
             }
@@ -54,6 +57,7 @@ public class MenuTareas {
         System.out.println("    4.  🗑   Eliminar una tarea");
         System.out.println("    5.  🔍  Filtrar tareas");
         System.out.println("    6.  📊  Ver mis estadísticas");
+        System.out.println("    7.  🌳  Ver tareas ordenadas por prioridad (TreeSet)");
         System.out.println("    0.  🚪  Cerrar sesión\n");
     }
 
@@ -61,6 +65,18 @@ public class MenuTareas {
 
     private void listarTodasLasTareas() {
         imprimirListaDeTareas(usuario.getTareas(), "TODAS LAS TAREAS");
+    }
+
+    // ─── 7. Ordenadas con TreeSet ─────────────────────────────────────────
+
+    /**
+     * Lista las tareas del usuario ordenadas por prioridad (ALTA→MEDIA→BAJA)
+     * y, dentro de la misma prioridad, por fecha de creación ascendente.
+     * El orden está garantizado por el TreeSet interno de Usuario.
+     */
+    private void listarTareasOrdenadas() {
+        imprimirListaDeTareas(usuario.getTareasOrdenadas(),
+                              "TAREAS ORDENADAS POR PRIORIDAD (TreeSet)");
     }
 
     private void imprimirListaDeTareas(List<Tarea> tareas, String encabezado) {
@@ -114,6 +130,7 @@ public class MenuTareas {
 
         // El usuario agrega la tarea a su propia ArrayList
         usuario.agregarTarea(nuevaTarea);
+        gestorUsuarios.guardarDatos(); // Persistir tras crear
         Consola.exito("Tarea creada correctamente (ID: " + nuevaTarea.getId() + ")");
         Consola.pausar();
     }
@@ -157,6 +174,7 @@ public class MenuTareas {
         System.out.println("    1. PENDIENTE   2. EN_PROGRESO   3. COMPLETADA");
         int opc = Consola.leerEntero("  → Estado: ");
         tarea.setEstado(Estado.fromInt(opc));
+        gestorUsuarios.guardarDatos(); // Persistir tras cambio de estado
         Consola.exito("Estado actualizado a: " + tarea.getEstado());
         Consola.pausar();
     }
@@ -181,6 +199,7 @@ public class MenuTareas {
         String confirmacion = Consola.leerLinea("  ¿Confirmas la eliminación? (s/n): ");
         if (confirmacion.equalsIgnoreCase("s")) {
             usuario.eliminarTarea(id);
+            gestorUsuarios.guardarDatos(); // Persistir tras eliminar
             Consola.exito("Tarea eliminada exitosamente.");
         } else {
             Consola.info("Operación cancelada.");

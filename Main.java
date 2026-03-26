@@ -1,13 +1,16 @@
 /**
  * Punto de entrada de la aplicación.
- * Requiere Java 17 o superior (usa switch expressions, text blocks, instanceof pattern).
+ * Lanza el servidor web en http://localhost:8080 y abre el navegador.
  *
  * Para compilar y ejecutar:
  *   javac *.java
  *   java Main
+ *
+ * Para usar la versión de consola, reemplaza la línea de abajo por:
+ *   new MenuPrincipal().iniciar();
  */
 public class Main {
-    public static void main(String[] args) {
-        new MenuPrincipal().iniciar();
+    public static void main(String[] args) throws Exception {
+        ServidorWeb.iniciar();
     }
 }

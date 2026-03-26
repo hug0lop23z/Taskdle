@@ -26,6 +26,16 @@ public class TareaConFechaLimite extends Tarea {
         this.fechaLimite = fechaLimite;
     }
 
+    /**
+     * Constructor de reconstrucción desde archivo (conserva el ID original).
+     */
+    public TareaConFechaLimite(int id, String titulo, String descripcion,
+                               Prioridad prioridad, java.time.LocalDateTime fechaCreacion,
+                               LocalDate fechaLimite) {
+        super(id, titulo, descripcion, prioridad, fechaCreacion);
+        this.fechaLimite = fechaLimite;
+    }
+
     // ─── Lógica adicional propia de esta subclase ──────────────────────────
 
     /**

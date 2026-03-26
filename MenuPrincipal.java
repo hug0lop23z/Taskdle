@@ -54,7 +54,7 @@ public class MenuPrincipal {
             Consola.exito("¡Bienvenido, " + usuario.getNombreUsuario() + "!");
             Consola.pausar();
             // Delegar control al menú de tareas de este usuario
-            new MenuTareas(usuario).iniciar();
+            new MenuTareas(usuario, gestorUsuarios).iniciar();
         } else {
             Consola.error("Usuario o contraseña incorrectos. Inténtalo de nuevo.");
             Consola.pausar();

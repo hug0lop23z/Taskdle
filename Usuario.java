@@ -1,5 +1,7 @@
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
@@ -61,6 +63,35 @@ public class Usuario {
                      .collect(Collectors.toList());
     }
 
+    // ─── Ordenación con TreeSet ──────────────────────────────────────────
+
+    /**
+     * Retorna las tareas del usuario ordenadas mediante un TreeSet.
+     *
+     * Criterio de orden (Comparator personalizado):
+     *   1. Prioridad: ALTA → MEDIA → BAJA  (orden de urgencia)
+     *   2. Desempate: fecha de creación ascendente (la más antigua primero)
+     *   3. Desempate final: ID (garantiza que no se pierde ninguna tarea en el Set)
+     *
+     * El TreeSet mantiene los elementos siempre ordenados gracias al
+     * árbol rojo-negro interno; la inserción y búsqueda son O(log n).
+     *
+     * @return nueva List con todas las tareas en orden de prioridad/fecha.
+     */
+    public List<Tarea> getTareasOrdenadas() {
+        Comparator<Tarea> comparador = Comparator
+                // 1. Prioridad: el ordinal del enum ya está en el orden ALTA=0, MEDIA=1, BAJA=2
+                .<Tarea, Integer>comparing(t -> t.getPrioridad().ordinal())
+                // 2. Dentro de la misma prioridad, la más antigua primero
+                .thenComparing(Tarea::getFechaCreacion)
+                // 3. Desempate final por ID (evita que el TreeSet descarte duplicados)
+                .thenComparingInt(Tarea::getId);
+
+        TreeSet<Tarea> treeset = new TreeSet<>(comparador);
+        treeset.addAll(tareas);
+        return new ArrayList<>(treeset);
+    }
+
     // ─── Estadísticas ─────────────────────────────────────────────────────
 
     /**
@@ -89,6 +120,7 @@ public class Usuario {
     // ─── Getters y Setters ────────────────────────────────────────────────
 
     public String getNombreUsuario()        { return nombreUsuario; }
+    public String getContrasena()           { return contrasena; }
     public List<Tarea> getTareas()          { return new ArrayList<>(tareas); } // Copia defensiva
     public void setContrasena(String c)     { this.contrasena = c; }
 }
