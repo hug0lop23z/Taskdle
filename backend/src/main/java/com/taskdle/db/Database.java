@@ -1,12 +1,11 @@
 package com.taskdle.db;
 
 import java.sql.*;
-import java.util.Properties;
 
 /**
  * Gestión del pool de conexiones a PostgreSQL (Supabase).
  * La URL de conexión se lee de la variable de entorno DATABASE_URL.
- * Formato esperado: postgresql://user:password@host:port/dbname
+ * Formato esperado: postgresql://user:password@host:port/dbname o postgres://...
  */
 public class Database {
 
@@ -16,19 +15,31 @@ public class Database {
     static {
         String raw = System.getenv(ENV_VAR);
         if (raw == null || raw.isBlank()) {
-            System.err.println("[DB] ADVERTENCIA: " + ENV_VAR + " no definida. Usando memoria temporal.");
+            System.err.println("[DB] ADVERTENCIA: " + ENV_VAR + " no definida.");
             jdbcUrl = null;
         } else {
-            // Supabase entrega: postgresql://user:pass@host:port/db  → convertir a jdbc:postgresql://
-            jdbcUrl = raw.startsWith("jdbc:") ? raw : "jdbc:" + raw;
-            // Supabase requiere SSL en producción
-            if (!jdbcUrl.contains("sslmode")) {
-                jdbcUrl += (jdbcUrl.contains("?") ? "&" : "?") + "sslmode=require";
+            raw = raw.trim();
+            // Normalizar postgres:// o postgresql:// hacia jdbc:postgresql://
+            if (raw.startsWith("postgres://")) {
+                raw = "jdbc:postgresql://" + raw.substring("postgres://".length());
+            } else if (raw.startsWith("postgresql://")) {
+                raw = "jdbc:postgresql://" + raw.substring("postgresql://".length());
+            } else if (!raw.startsWith("jdbc:postgresql://")) {
+                raw = "jdbc:postgresql://" + raw;
             }
+
+            // Supabase requiere SSL en producción
+            if (!raw.contains("sslmode")) {
+                raw += (raw.contains("?") ? "&" : "?") + "sslmode=require";
+            }
+            jdbcUrl = raw;
         }
-        // Cargar driver JDBC
-        try { Class.forName("org.postgresql.Driver"); }
-        catch (ClassNotFoundException e) { System.err.println("[DB] Driver PostgreSQL no encontrado."); }
+
+        try {
+            Class.forName("org.postgresql.Driver");
+        } catch (ClassNotFoundException e) {
+            System.err.println("[DB] Driver PostgreSQL no encontrado.");
+        }
     }
 
     public static boolean isAvailable() {
@@ -45,11 +56,12 @@ public class Database {
         if (!isAvailable()) return;
         try (Connection conn = getConnection();
              Statement st = conn.createStatement()) {
-            // Leer schema.sql desde resources
             try (var is = Database.class.getResourceAsStream("/schema.sql")) {
-                if (is == null) { System.err.println("[DB] schema.sql no encontrado"); return; }
+                if (is == null) {
+                    System.err.println("[DB] schema.sql no encontrado");
+                    return;
+                }
                 String sql = new String(is.readAllBytes());
-                // Ejecutar cada sentencia separada por ;
                 for (String stmt : sql.split(";")) {
                     String s = stmt.trim();
                     if (!s.isBlank()) st.execute(s);

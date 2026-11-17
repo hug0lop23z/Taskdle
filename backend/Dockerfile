@@ -2,12 +2,14 @@
 FROM gradle:8.5-jdk17 AS builder
 WORKDIR /app
 COPY . .
-RUN gradle fatJar --no-daemon
+RUN gradle installDist --no-daemon
 
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
-COPY --from=builder /app/build/libs/taskdle-all.jar app.jar
+COPY --from=builder /app/build/install/taskdle-backend .
 
 EXPOSE 8080
 
-CMD ["java", "-jar", "app.jar"]
+RUN chmod +x bin/taskdle-backend
+
+CMD ["bin/taskdle-backend"]

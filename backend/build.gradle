@@ -5,7 +5,6 @@ plugins {
 
 group = 'com.taskdle'
 version = '1.0.0'
-sourceCompatibility = '17'
 
 repositories {
     mavenCentral()
@@ -16,30 +15,24 @@ dependencies {
     implementation 'org.postgresql:postgresql:42.7.3'
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
 application {
     mainClass = 'com.taskdle.Main'
 }
 
-jar {
-    manifest {
-        attributes(
-            'Main-Class': 'com.taskdle.Main',
-            'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.join(' ')
-        )
-    }
-}
-
-// Fat JAR (uber jar) para despliegue en Render
 tasks.register('fatJar', Jar) {
-    dependsOn configurations.runtimeClasspath
+    archiveBaseName = 'taskdle'
+    archiveClassifier = 'all'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     manifest {
         attributes 'Main-Class': 'com.taskdle.Main'
     }
+    from sourceSets.main.output
     from {
         configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     }
-    with jar
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    archiveBaseName = 'taskdle'
-    archiveClassifier = 'all'
 }
