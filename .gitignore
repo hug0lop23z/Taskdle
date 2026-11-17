@@ -1,0 +1,21 @@
+# Java / IntelliJ
+out/
+*.class
+*.jar
+.idea/
+*.iml
+
+# Backend build
+backend/build/
+backend/.gradle/
+backend/.env
+
+# Frontend
+frontend/.vercel/
+
+# Data (no subir datos locales)
+datos.csv
+
+# OS
+.DS_Store
+Thumbs.db
