@@ -1576,7 +1576,11 @@
           currentUser = data.usuario;
           enterDashboard();
         } else {
-          showErr('err-login', data.mensaje || 'Error al iniciar sesión');
+          if (data.error === 'Network' || !res.ok) {
+            showErr('err-login', 'No se pudo conectar con el servidor (' + API_BASE + ')');
+          } else {
+            showErr('err-login', data.mensaje || 'Error al iniciar sesión');
+          }
         }
       } catch (e) {
         showErr('err-login', 'Error de conexión con el servidor');
@@ -1604,7 +1608,11 @@
           enterDashboard();
           toast('¡Cuenta creada! Bienvenido 🎉', 'success');
         } else {
-          showErr('err-registro', data.mensaje || 'Error al registrar');
+          if (data.error === 'Network' || !res.ok) {
+            showErr('err-registro', 'No se pudo conectar con el servidor (' + API_BASE + ')');
+          } else {
+            showErr('err-registro', data.mensaje || 'Error al registrar');
+          }
         }
       } catch (e) {
         showErr('err-registro', 'Error de conexión con el servidor');
