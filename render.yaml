@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: taskdle-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: DATABASE_URL
+        sync: false   # Se configura manualmente en el dashboard de Render
+      - key: PORT
+        value: 8080
+    healthCheckPath: /health
+    autoDeploy: true
