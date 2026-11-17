@@ -21,20 +21,32 @@ public class GestorUsuarios {
 
     // ─── Usuarios ────────────────────────────────────────────────────────────
 
-    public boolean registrarUsuario(String nombre, String password) {
-        if (nombre == null || nombre.isBlank() || nombre.length() < 3) return false;
-        if (password == null || password.length() < 4) return false;
-        if (usuarioDao.existe(nombre)) return false;
-        return usuarioDao.insertar(new Usuario(nombre, password));
+    /**
+     * @return 0 = Éxito, 1 = Datos inválidos, 2 = Usuario ya existe, 3 = Error de Base de Datos
+     */
+    public int registrarUsuario(String nombre, String password) {
+        if (nombre == null || nombre.isBlank() || nombre.length() < 3) return 1;
+        if (password == null || password.length() < 4) return 1;
+        if (!Database.isAvailable()) return 3;
+        try {
+            if (usuarioDao.existe(nombre)) return 2;
+            boolean ok = usuarioDao.insertar(new Usuario(nombre, password));
+            return ok ? 0 : 3;
+        } catch (Exception e) {
+            System.err.println("[GestorUsuarios] Error registrando usuario: " + e.getMessage());
+            return 3;
+        }
     }
 
     public Usuario autenticar(String nombre, String password) {
+        if (!Database.isAvailable()) return null;
         Usuario u = usuarioDao.buscar(nombre);
         if (u != null && u.verificarPassword(password)) return u;
         return null;
     }
 
     public Usuario getUsuario(String nombre) {
+        if (!Database.isAvailable()) return null;
         return usuarioDao.buscar(nombre);
     }
 

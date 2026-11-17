@@ -1,11 +1,15 @@
 package com.taskdle.api;
 
 import com.sun.net.httpserver.*;
+import com.taskdle.db.Database;
 import com.taskdle.model.*;
 import com.taskdle.service.GestorUsuarios;
 import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -26,16 +30,44 @@ public class ServidorWeb {
         gestor = new GestorUsuarios();
 
         HttpServer server = HttpServer.create(new InetSocketAddress(PUERTO), 0);
-        server.createContext("/api/login",    ServidorWeb::handleLogin);
-        server.createContext("/api/registro", ServidorWeb::handleRegistro);
-        server.createContext("/api/tareas",   ServidorWeb::handleTareas);
-        server.createContext("/api/racha",    ServidorWeb::handleRacha);
-        server.createContext("/health",       ex -> respond(ex, 200, "text/plain", "OK"));
+        server.createContext("/api/login",     ServidorWeb::handleLogin);
+        server.createContext("/api/registro",  ServidorWeb::handleRegistro);
+        server.createContext("/api/tareas",    ServidorWeb::handleTareas);
+        server.createContext("/api/racha",     ServidorWeb::handleRacha);
+        server.createContext("/api/db-status", ServidorWeb::handleDbStatus);
+        server.createContext("/health",        ex -> respond(ex, 200, "text/plain", "OK"));
         server.setExecutor(null);
         server.start();
 
         System.out.println("  ✅ Servidor iniciado en puerto " + PUERTO);
         System.out.println("  ℹ  Presiona Ctrl+C para detener.");
+    }
+
+    // ─── Estado de la Base de Datos ──────────────────────────────────────────
+
+    static void handleDbStatus(HttpExchange ex) throws IOException {
+        corsHeaders(ex);
+        if (preflight(ex)) return;
+
+        boolean available = Database.isAvailable();
+        String error = null;
+        if (available) {
+            try (Connection c = Database.getConnection()) {
+                DatabaseMetaData meta = c.getMetaData();
+                try (ResultSet rs = meta.getTables(null, null, "usuarios", new String[]{"TABLE"})) {
+                    if (!rs.next()) {
+                        error = "La tabla 'usuarios' no existe (ejecuta schema.sql en Supabase)";
+                    }
+                }
+            } catch (Exception e) {
+                error = e.getMessage();
+            }
+        } else {
+            error = "La variable DATABASE_URL no esta configurada en Render";
+        }
+
+        String json = "{\"dbConfigurada\":" + available + ",\"error\":" + (error == null ? "null" : "\"" + esc(error) + "\"") + "}";
+        respond(ex, 200, "application/json", json);
     }
 
     // ─── Login ───────────────────────────────────────────────────────────────
@@ -49,11 +81,16 @@ public class ServidorWeb {
         String usuario  = extractJson(body, "usuario");
         String password = extractJson(body, "password");
 
+        if (!Database.isAvailable()) {
+            respond(ex, 200, "application/json", "{\"ok\":false,\"mensaje\":\"Base de datos no configurada (DATABASE_URL no definida en Render)\"}");
+            return;
+        }
+
         Usuario u = gestor.autenticar(usuario, password);
         if (u != null) {
             respond(ex, 200, "application/json", "{\"ok\":true,\"usuario\":\"" + esc(usuario) + "\"}");
         } else {
-            respond(ex, 200, "application/json", "{\"ok\":false,\"mensaje\":\"Usuario o contrase\\u00f1a incorrectos\"}");
+            respond(ex, 200, "application/json", "{\"ok\":false,\"mensaje\":\"Usuario o contraseña incorrectos\"}");
         }
     }
 
@@ -68,20 +105,15 @@ public class ServidorWeb {
         String usuario  = extractJson(body, "usuario");
         String password = extractJson(body, "password");
 
-        if (usuario == null || usuario.isBlank() || usuario.length() < 3) {
-            respond(ex, 200, "application/json", "{\"ok\":false,\"mensaje\":\"El nombre debe tener al menos 3 caracteres\"}");
-            return;
-        }
-        if (password == null || password.length() < 4) {
-            respond(ex, 200, "application/json", "{\"ok\":false,\"mensaje\":\"La contrase\\u00f1a debe tener al menos 4 caracteres\"}");
-            return;
-        }
-
-        boolean ok = gestor.registrarUsuario(usuario, password);
-        if (ok) {
+        int res = gestor.registrarUsuario(usuario, password);
+        if (res == 0) {
             respond(ex, 200, "application/json", "{\"ok\":true,\"usuario\":\"" + esc(usuario) + "\"}");
-        } else {
+        } else if (res == 1) {
+            respond(ex, 200, "application/json", "{\"ok\":false,\"mensaje\":\"Completa los campos (mín. 3 caracteres para usuario y 4 para contraseña)\"}");
+        } else if (res == 2) {
             respond(ex, 200, "application/json", "{\"ok\":false,\"mensaje\":\"El usuario ya existe. Elige otro nombre\"}");
+        } else {
+            respond(ex, 200, "application/json", "{\"ok\":false,\"mensaje\":\"Error de conexion con la base de datos (verifica DATABASE_URL en Render y que ejecutaste schema.sql en Supabase)\"}");
         }
     }
 
@@ -142,7 +174,7 @@ public class ServidorWeb {
             String subtareasStr = extractJson(body, "subtareas");
 
             if (nombre == null || titulo == null || titulo.isBlank()) {
-                respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"Datos inv\\u00e1lidos\"}");
+                respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"Datos inválidos\"}");
                 return;
             }
 
@@ -166,7 +198,7 @@ public class ServidorWeb {
             if (newId > 0) {
                 respond(ex, 200, "application/json", "{\"ok\":true,\"id\":" + newId + "}");
             } else {
-                respond(ex, 500, "application/json", "{\"ok\":false,\"mensaje\":\"Error al guardar\"}");
+                respond(ex, 500, "application/json", "{\"ok\":false,\"mensaje\":\"Error al guardar en base de datos\"}");
             }
             return;
         }
@@ -211,18 +243,16 @@ public class ServidorWeb {
             String subIdStr = extractJson(body, "subtareaId");
 
             try {
-                // Si el frontend envía el ID de la subtarea directamente, usarlo
                 if (subIdStr != null) {
                     int subtareaId = Integer.parseInt(subIdStr);
                     boolean completada = Boolean.parseBoolean(compStr);
                     gestor.actualizarSubtarea(subtareaId, completada);
-
-                    // Verificar si todas las subtareas están completas
+                    
                     Tarea t = gestor.buscarTarea(id, nombre);
                     boolean rachaCambio = false;
                     int rachaActual = 0;
                     String nuevoEstado = t != null ? t.getEstado().name() : "PENDIENTE";
-
+                    
                     if (t != null) {
                         boolean allComplete = t.getSubtareas().stream().allMatch(Subtarea::isCompletada);
                         if (allComplete && t.getEstado() != Estado.COMPLETADA) {
@@ -236,7 +266,7 @@ public class ServidorWeb {
                             nuevoEstado = Estado.EN_PROGRESO.name();
                         }
                     }
-
+                    
                     respond(ex, 200, "application/json",
                         "{\"ok\":true,\"rachaCambiada\":" + rachaCambio +
                         ",\"rachaActual\":" + rachaActual +
