@@ -60,7 +60,8 @@ public class ServidorWeb {
                     }
                 }
             } catch (Exception e) {
-                error = e.getMessage();
+                Throwable cause = e.getCause();
+                error = e.getMessage() + (cause != null ? " [Causa: " + cause.getClass().getSimpleName() + ": " + cause.getMessage() + "]" : "");
             }
         } else {
             error = "La variable DATABASE_URL no esta configurada en Render";

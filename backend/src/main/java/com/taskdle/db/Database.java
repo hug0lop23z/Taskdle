@@ -109,7 +109,7 @@ public class Database {
                 System.out.println("  ✅ Esquema de BD inicializado correctamente.");
             }
         } catch (Exception e) {
-            System.err.println("[DB] Error inicializando schema: " + e.getMessage());
+            System.err.println("[DB] Error inicializando schema: " + e.getMessage() + (e.getCause() != null ? " (" + e.getCause().getMessage() + ")" : ""));
         }
     }
 }
