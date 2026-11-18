@@ -1489,6 +1489,56 @@
       flex-wrap: wrap;
     }
 
+    .stats-summary,
+    .filters-summary,
+    .task-details-summary {
+      list-style: none;
+    }
+
+    .stats-summary::-webkit-details-marker,
+    .filters-summary::-webkit-details-marker,
+    .task-details-summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .stats-summary,
+    .filters-summary,
+    .task-details-summary {
+      display: none;
+    }
+
+    .task-details {
+      min-width: 0;
+    }
+
+    .task-details-summary {
+      align-items: center;
+      gap: .45rem;
+      color: var(--primary);
+      cursor: pointer;
+      font-size: .78rem;
+      font-weight: 600;
+      user-select: none;
+    }
+
+    .task-details-count {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: .72rem;
+      font-weight: 500;
+    }
+
+    .task-details-chevron,
+    .disclosure-chevron {
+      transition: transform .18s ease;
+    }
+
+    .task-details[open] .task-details-chevron,
+    .stats-disclosure[open] .disclosure-chevron,
+    .filters-disclosure[open] .disclosure-chevron {
+      transform: rotate(180deg);
+    }
+
     .empty-state .empty-icon {
       width: 2.4rem;
       height: 2.4rem;
@@ -1522,9 +1572,57 @@
       .stats-bar {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        padding: .8rem 1rem .3rem;
+        padding: .65rem 0 .2rem;
         gap: .5rem;
         overflow: visible;
+      }
+
+      .stats-disclosure,
+      .filters-disclosure {
+        margin: .35rem 1rem 0;
+      }
+
+      .stats-summary,
+      .filters-summary {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        min-height: 42px;
+        padding: .55rem .8rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        color: var(--text);
+        cursor: pointer;
+        font-size: .82rem;
+        font-weight: 600;
+      }
+
+      .stats-summary-count,
+      .filters-summary-state {
+        margin-left: auto;
+        color: var(--muted);
+        font-size: .76rem;
+        font-weight: 500;
+      }
+
+      .stats-summary .disclosure-chevron,
+      .filters-summary .disclosure-chevron {
+        color: var(--muted);
+      }
+
+      .filters-disclosure .filters {
+        margin: .65rem 0 0;
+      }
+
+      .task-details-summary {
+        display: flex;
+        padding-top: .5rem;
+        border-top: 1px solid var(--border);
+      }
+
+      .task-details-content {
+        padding-top: .15rem;
       }
 
       .stat-card {
@@ -1658,6 +1756,7 @@
     <symbol id="icon-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-8 13h4"/></symbol>
     <symbol id="icon-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
     <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="icon-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
   </svg>
 
   <!-- ── Auth Page ─────────────────────────────────────────────── -->
@@ -1733,28 +1832,35 @@
       </div>
     </header>
 
-    <div class="stats-bar">
-      <div class="stat-card total">
-        <div class="stat-num" id="stat-total">0</div>
-        <div class="stat-label">Total</div>
+    <details class="stats-disclosure" id="stats-disclosure" open>
+      <summary class="stats-summary" onclick="this.parentElement.dataset.userToggled='true'">
+        <span>Resumen</span>
+        <span class="stats-summary-count" id="stats-summary-count">0 tareas</span>
+        <svg class="icon disclosure-chevron" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+      </summary>
+      <div class="stats-bar">
+        <div class="stat-card total">
+          <div class="stat-num" id="stat-total">0</div>
+          <div class="stat-label">Total</div>
+        </div>
+        <div class="stat-card pendiente">
+          <div class="stat-num" id="stat-pend">0</div>
+          <div class="stat-label">Pendientes</div>
+        </div>
+        <div class="stat-card progreso">
+          <div class="stat-num" id="stat-prog">0</div>
+          <div class="stat-label">En progreso</div>
+        </div>
+        <div class="stat-card completada">
+          <div class="stat-num" id="stat-comp">0</div>
+          <div class="stat-label">Completadas</div>
+        </div>
+        <div class="stat-card vencida">
+          <div class="stat-num" id="stat-venc">0</div>
+          <div class="stat-label">Vencidas</div>
+        </div>
       </div>
-      <div class="stat-card pendiente">
-        <div class="stat-num" id="stat-pend">0</div>
-        <div class="stat-label">Pendientes</div>
-      </div>
-      <div class="stat-card progreso">
-        <div class="stat-num" id="stat-prog">0</div>
-        <div class="stat-label">En progreso</div>
-      </div>
-      <div class="stat-card completada">
-        <div class="stat-num" id="stat-comp">0</div>
-        <div class="stat-label">Completadas</div>
-      </div>
-      <div class="stat-card vencida">
-        <div class="stat-num" id="stat-venc">0</div>
-        <div class="stat-label">Vencidas</div>
-      </div>
-    </div>
+    </details>
 
     <div class="view-toggle-bar">
       <button class="view-btn" onclick="exportarCSV()" style="margin-right:.4rem;"><svg class="icon" aria-hidden="true"><use href="#icon-download"></use></svg> CSV</button>
@@ -1766,20 +1872,27 @@
     </div>
 
     <div class="main-content" id="list-view">
-      <div class="filters">
-        <span class="filter-label">Filtrar:</span>
-        <button class="filter-btn active" data-filter="ALL" onclick="setFilter(this)">Todas</button>
-        <button class="filter-btn" data-filter="PENDIENTE" onclick="setFilter(this)">Pendientes</button>
-        <button class="filter-btn" data-filter="EN_PROGRESO" onclick="setFilter(this)">En progreso</button>
-        <button class="filter-btn" data-filter="COMPLETADA" onclick="setFilter(this)">Completadas</button>
-        <button class="filter-btn" data-filter="VENCIDA" onclick="setFilter(this)"><svg class="icon" aria-hidden="true"><use href="#icon-alert"></use></svg> Vencidas</button>
-        <button class="filter-btn" id="btn-toggle-select" onclick="toggleSelectMode()" style="margin-left: .5rem;"><svg class="icon" aria-hidden="true"><use href="#icon-select"></use></svg> Seleccionar</button>
-        <button class="filter-btn" id="btn-select-all" onclick="seleccionarTodas()" style="display: none;"><svg class="icon" aria-hidden="true"><use href="#icon-check"></use></svg> Todas</button>
-        
-        <div class="bulk-action-bar" id="bulk-action-bar" style="margin-left:auto; display:none;">
-          <button class="btn-bulk-delete" onclick="borrarSeleccionadas()"><svg class="icon" aria-hidden="true"><use href="#icon-trash"></use></svg> Borrar (<span id="bulk-count">0</span>)</button>
+      <details class="filters-disclosure" id="filters-disclosure" open>
+        <summary class="filters-summary" onclick="this.parentElement.dataset.userToggled='true'">
+          <span>Filtros y acciones</span>
+          <span class="filters-summary-state" id="filters-summary-state">Todas</span>
+          <svg class="icon disclosure-chevron" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+        </summary>
+        <div class="filters">
+          <span class="filter-label">Filtrar:</span>
+          <button class="filter-btn active" data-filter="ALL" onclick="setFilter(this)">Todas</button>
+          <button class="filter-btn" data-filter="PENDIENTE" onclick="setFilter(this)">Pendientes</button>
+          <button class="filter-btn" data-filter="EN_PROGRESO" onclick="setFilter(this)">En progreso</button>
+          <button class="filter-btn" data-filter="COMPLETADA" onclick="setFilter(this)">Completadas</button>
+          <button class="filter-btn" data-filter="VENCIDA" onclick="setFilter(this)"><svg class="icon" aria-hidden="true"><use href="#icon-alert"></use></svg> Vencidas</button>
+          <button class="filter-btn" id="btn-toggle-select" onclick="toggleSelectMode()" style="margin-left: .5rem;"><svg class="icon" aria-hidden="true"><use href="#icon-select"></use></svg> Seleccionar</button>
+          <button class="filter-btn" id="btn-select-all" onclick="seleccionarTodas()" style="display: none;"><svg class="icon" aria-hidden="true"><use href="#icon-check"></use></svg> Todas</button>
+
+          <div class="bulk-action-bar" id="bulk-action-bar" style="margin-left:auto; display:none;">
+            <button class="btn-bulk-delete" onclick="borrarSeleccionadas()"><svg class="icon" aria-hidden="true"><use href="#icon-trash"></use></svg> Borrar (<span id="bulk-count">0</span>)</button>
+          </div>
         </div>
-      </div>
+      </details>
       <div class="task-grid" id="task-grid"></div>
     </div>
 
@@ -1890,6 +2003,23 @@
       document.querySelector('meta[name="theme-color"]').content = isDark ? '#202a27' : '#f4f6f3';
     }
 
+    let lastCompactMode = null;
+    function syncResponsiveDisclosures() {
+      const compactMode = window.matchMedia('(max-width: 640px)').matches;
+      if (compactMode === lastCompactMode) return;
+      lastCompactMode = compactMode;
+
+      document.querySelectorAll('#stats-disclosure, #filters-disclosure, .task-details').forEach(disclosure => {
+        if (!compactMode) {
+          disclosure.open = true;
+        } else if (disclosure.matches('.task-details')) {
+          disclosure.open = expandedTaskDetails.has(Number(disclosure.dataset.taskId));
+        } else if (!disclosure.dataset.userToggled) {
+          disclosure.open = false;
+        }
+      });
+    }
+
     // ── Configuración de API ──────────────────────────────────────────────────
     const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
                      ? 'http://localhost:8080'
@@ -1953,6 +2083,7 @@
     let popoverEl = null; // active popover element
     let selectedTaskIds = new Set();
     let isSelectMode = false;
+    const expandedTaskDetails = new Set();
 
     // ── Theme ────────────────────────────────────────────────────
     function toggleTheme() {
@@ -1974,6 +2105,16 @@
     }
 
     updateThemeIcons();
+    syncResponsiveDisclosures();
+    window.addEventListener('resize', syncResponsiveDisclosures);
+    document.addEventListener('toggle', event => {
+      const details = event.target;
+      if (details.matches('.task-details') && window.matchMedia('(max-width: 640px)').matches) {
+        const taskId = Number(details.dataset.taskId);
+        if (details.open) expandedTaskDetails.add(taskId);
+        else expandedTaskDetails.delete(taskId);
+      }
+    }, true);
 
     // ── Auth ─────────────────────────────────────────────────────
     function showTab(tab) {
@@ -2223,6 +2364,10 @@
       document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       activeFilter = btn.dataset.filter;
+      document.getElementById('filters-summary-state').textContent = btn.textContent.trim();
+      if (window.matchMedia('(max-width: 640px)').matches) {
+        document.getElementById('filters-disclosure').open = false;
+      }
       renderTareas();
     }
 
@@ -2233,6 +2378,7 @@
       const comp = allTasks.filter(t => t.estado === 'COMPLETADA').length;
       const venc = allTasks.filter(t => t.vencida).length;
       document.getElementById('stat-total').textContent = total;
+      document.getElementById('stats-summary-count').textContent = `${total} ${total === 1 ? 'tarea' : 'tareas'}`;
       document.getElementById('stat-pend').textContent = pend;
       document.getElementById('stat-prog').textContent = prog;
       document.getElementById('stat-comp').textContent = comp;
@@ -2282,10 +2428,12 @@
 
       // Subtareas HTML
       let subtareasHtml = '';
+      let subtareasResumen = '';
       if (t.subtareas && t.subtareas.length > 0) {
         const total = t.subtareas.length;
         const hechas = t.subtareas.filter(s => s.completada).length;
         const pct = Math.round((hechas / total) * 100);
+        subtareasResumen = `${hechas}/${total} pasos`;
         
         let sList = t.subtareas.map((st, i) => `
           <label style="display:flex; align-items:center; gap:.5rem; font-size:.82rem; cursor:pointer;" onclick="event.stopPropagation()">
@@ -2310,6 +2458,22 @@
         `;
       }
 
+      const detallesContenido = [
+        t.descripcion ? `<div class="task-desc">${escHtml(t.descripcion)}</div>` : '',
+        subtareasHtml
+      ].filter(Boolean).join('');
+      const detallesTitulo = subtareasHtml ? 'Detalles' : 'Descripción';
+      const detallesHtml = detallesContenido ? `
+        <details class="task-details" data-task-id="${t.id}" ${window.matchMedia('(max-width: 640px)').matches ? (expandedTaskDetails.has(Number(t.id)) ? 'open' : '') : 'open'}>
+          <summary class="task-details-summary" onclick="this.parentElement.dataset.userToggled='true'">
+            <span>${detallesTitulo}</span>
+            ${subtareasResumen ? `<span class="task-details-count">${subtareasResumen}</span>` : ''}
+            ${icon('chevron-down', 'task-details-chevron')}
+          </summary>
+          <div class="task-details-content">${detallesContenido}</div>
+        </details>
+      ` : '';
+
       return `
   <div class="task-card ${prioClass} ${cardClass}" id="card-${t.id}">
     <div class="task-header">
@@ -2317,8 +2481,7 @@
       <div class="task-title ${titleClass}">${escHtml(t.titulo)}</div>
       <span class="badge ${prioBadge}">${t.prioridad}</span>
     </div>
-    ${t.descripcion ? `<div class="task-desc">${escHtml(t.descripcion)}</div>` : ''}
-    ${subtareasHtml}
+    ${detallesHtml}
     <div class="task-meta">${metaInfo}</div>
     <div class="task-footer">
       <select class="state-select ${t.estado}" id="sel-${t.id}"
