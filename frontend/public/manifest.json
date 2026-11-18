@@ -4,8 +4,8 @@
   "description": "Herramienta de gestión de tareas con soporte offline.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#09090b",
-  "theme_color": "#7c3aed",
+  "background_color": "#f4f6f3",
+  "theme_color": "#52796f",
   "icons": [
     {
       "src": "./icon.svg",

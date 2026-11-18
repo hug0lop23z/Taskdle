@@ -8,7 +8,7 @@
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icon.svg">
-  <meta name="theme-color" content="#09090b">
+  <meta name="theme-color" content="#f4f6f3">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -21,40 +21,44 @@
     }
 
     :root {
-      --bg: #0d0d1a;
-      --surface: #13132a;
-      --surface2: #1c1c3a;
-      --surface3: #252548;
-      --primary: #7c3aed;
-      --primary-h: #9f67ff;
-      --cyan: #22d3ee;
-      --success: #10b981;
-      --warning: #f59e0b;
-      --danger: #ef4444;
-      --text: #e2e8f0;
-      --muted: #94a3b8;
-      --border: rgba(255, 255, 255, 0.07);
-      --glass: rgba(255, 255, 255, 0.04);
+      color-scheme: light;
+      --bg: #f4f6f3;
+      --surface: #ffffff;
+      --surface2: #f1f4f1;
+      --surface3: #e3e9e4;
+      --primary: #52796f;
+      --primary-h: #3f6258;
+      --on-primary: #ffffff;
+      --cyan: #5f8490;
+      --success: #54806c;
+      --warning: #a77a3b;
+      --danger: #b76b67;
+      --text: #26332e;
+      --muted: #73817a;
+      --border: rgba(55, 75, 65, 0.12);
+      --glass: rgba(82, 121, 111, 0.045);
       --radius: 14px;
-      --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      --shadow: 0 12px 32px rgba(43, 61, 52, 0.09);
     }
 
-    :root[data-theme="light"] {
-      --bg: #f8fafc;
-      --surface: #ffffff;
-      --surface2: #f1f5f9;
-      --surface3: #e2e8f0;
-      --primary: #6d28d9;
-      --primary-h: #5b21b6;
-      --cyan: #0891b2;
-      --success: #059669;
-      --warning: #d97706;
-      --danger: #dc2626;
-      --text: #0f172a;
-      --muted: #64748b;
-      --border: rgba(0, 0, 0, 0.1);
-      --glass: rgba(0, 0, 0, 0.05);
-      --shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #202a27;
+      --surface: #283430;
+      --surface2: #313e39;
+      --surface3: #40504a;
+      --primary: #92b4a7;
+      --primary-h: #aec8bd;
+      --on-primary: #20302a;
+      --cyan: #91b6bf;
+      --success: #91b8a0;
+      --warning: #d0ae79;
+      --danger: #d99a91;
+      --text: #e4ebe6;
+      --muted: #a1b0a8;
+      --border: rgba(225, 238, 229, 0.12);
+      --glass: rgba(225, 238, 229, 0.045);
+      --shadow: 0 12px 32px rgba(8, 15, 11, 0.22);
     }
 
     body {
@@ -93,10 +97,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background:
-        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(124, 58, 237, 0.2) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 50% at 80% 90%, rgba(34, 211, 238, 0.15) 0%, transparent 55%),
-        var(--bg);
+      background: var(--bg);
       padding: 1rem;
     }
 
@@ -122,7 +123,7 @@
     .auth-theme-btn:hover {
       border-color: var(--primary);
       transform: scale(1.05);
-      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
+      box-shadow: 0 4px 12px rgba(55, 91, 77, 0.12);
     }
 
     .auth-card {
@@ -132,7 +133,7 @@
       padding: 2.5rem;
       width: 100%;
       max-width: 420px;
-      box-shadow: var(--shadow), 0 0 0 1px rgba(124, 58, 237, 0.1);
+      box-shadow: var(--shadow);
       animation: fadeUp 0.5s ease;
     }
 
@@ -154,10 +155,9 @@
     }
 
     .auth-logo .logo-icon {
-      font-size: 2.8rem;
       display: block;
       margin-bottom: .5rem;
-      filter: drop-shadow(0 0 16px rgba(124, 58, 237, 0.6));
+      filter: drop-shadow(0 3px 8px rgba(55, 91, 77, 0.18));
     }
 
     .auth-logo h1 {
@@ -198,7 +198,7 @@
     .tab-btn.active {
       background: var(--primary);
       color: #fff;
-      box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);
+      box-shadow: none;
     }
 
     .form-group {
@@ -228,7 +228,7 @@
 
     .form-group input:focus {
       border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+      box-shadow: 0 0 0 3px rgba(82, 121, 111, 0.16);
     }
 
     .form-group input::placeholder {
@@ -252,15 +252,15 @@
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, var(--primary), #9f3aed);
+      background: var(--primary);
       color: #fff;
       width: 100%;
-      box-shadow: 0 4px 20px rgba(124, 58, 237, 0.35);
+      box-shadow: 0 5px 14px rgba(55, 91, 77, 0.18);
     }
 
     .btn-primary:hover {
       transform: translateY(-1px);
-      box-shadow: 0 6px 24px rgba(124, 58, 237, 0.5);
+      box-shadow: 0 7px 18px rgba(55, 91, 77, 0.22);
     }
 
     .btn-primary:active {
@@ -274,12 +274,12 @@
     }
 
     .err-msg {
-      background: rgba(239, 68, 68, .1);
-      border: 1px solid rgba(239, 68, 68, .3);
+      background: rgba(183, 107, 103, 0.1);
+      border: 1px solid rgba(183, 107, 103, 0.28);
       border-radius: 8px;
       padding: .65rem 1rem;
       font-size: .85rem;
-      color: #fca5a5;
+      color: var(--danger);
       margin-top: 1rem;
       display: none;
     }
@@ -316,7 +316,7 @@
 
     .header-left .logo {
       font-size: 1.6rem;
-      filter: drop-shadow(0 0 8px rgba(124, 58, 237, 0.5));
+      filter: drop-shadow(0 3px 8px rgba(55, 91, 77, 0.18));
     }
 
     .header-left h2 {
@@ -344,8 +344,8 @@
     }
 
     .streak-badge.fire {
-      color: #f97316;
-      box-shadow: 0 0 10px rgba(249, 115, 22, 0.2);
+      color: var(--success);
+      box-shadow: none;
     }
 
     .streak-badge.danger {
@@ -354,9 +354,9 @@
     }
 
     @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-      70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+      0% { box-shadow: 0 0 0 0 rgba(183, 107, 103, 0.2); }
+      70% { box-shadow: 0 0 0 6px rgba(183, 107, 103, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(183, 107, 103, 0); }
     }
 
     .user-badge {
@@ -506,11 +506,11 @@
       background: var(--primary);
       border-color: var(--primary);
       color: #fff;
-      box-shadow: 0 2px 10px rgba(124, 58, 237, 0.3);
+      box-shadow: none;
     }
 
     .btn-bulk-delete {
-      background: rgba(239, 68, 68, 0.1);
+      background: rgba(183, 107, 103, 0.08);
       border: 1px solid var(--danger);
       color: var(--danger);
       padding: .4rem .9rem;
@@ -524,7 +524,7 @@
     .btn-bulk-delete:hover {
       background: var(--danger);
       color: #fff;
-      box-shadow: 0 2px 10px rgba(239, 68, 68, 0.3);
+      box-shadow: none;
     }
     .btn-bulk-delete:disabled {
       opacity: 0.6;
@@ -563,24 +563,24 @@
     }
 
     .task-card.alta::before {
-      background: linear-gradient(90deg, var(--danger), #f97316);
+      background: var(--danger);
     }
 
     .task-card.media::before {
-      background: linear-gradient(90deg, var(--warning), #eab308);
+      background: var(--warning);
     }
 
     .task-card.baja::before {
-      background: linear-gradient(90deg, var(--success), #34d399);
+      background: var(--success);
     }
 
     .task-card.vencida-card {
-      border-color: rgba(239, 68, 68, .3);
+      border-color: rgba(183, 107, 103, .3);
     }
 
     .task-card:hover {
       transform: translateY(-3px);
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+      box-shadow: 0 10px 24px rgba(43, 61, 52, 0.09);
     }
 
     .task-header {
@@ -628,18 +628,18 @@
     }
 
     .badge-alta {
-      background: rgba(239, 68, 68, .2);
-      color: #fca5a5;
+      background: rgba(183, 107, 103, 0.13);
+      color: var(--danger);
     }
 
     .badge-media {
-      background: rgba(245, 158, 11, .2);
-      color: #fcd34d;
+      background: rgba(167, 122, 59, 0.14);
+      color: var(--warning);
     }
 
     .badge-baja {
-      background: rgba(16, 185, 129, .2);
-      color: #6ee7b7;
+      background: rgba(84, 128, 108, 0.13);
+      color: var(--success);
     }
 
     .task-desc {
@@ -725,7 +725,7 @@
     .btn-delete:hover {
       border-color: var(--danger);
       color: var(--danger);
-      background: rgba(239, 68, 68, .1);
+      background: rgba(183, 107, 103, 0.1);
     }
 
     /* Empty state */
@@ -754,12 +754,12 @@
       width: 56px;
       height: 56px;
       border-radius: 50%;
-      background: linear-gradient(135deg, var(--primary), #9f3aed);
+      background: var(--primary);
       border: none;
       color: #fff;
       font-size: 1.5rem;
       cursor: pointer;
-      box-shadow: 0 6px 24px rgba(124, 58, 237, 0.5);
+      box-shadow: 0 5px 14px rgba(55, 91, 77, 0.18);
       transition: all .25s;
       display: none;
       align-items: center;
@@ -906,7 +906,7 @@
 
     .btn-primary-modal {
       flex: 2;
-      background: linear-gradient(135deg, var(--primary), #9f3aed);
+      background: var(--primary);
       border: none;
       border-radius: 10px;
       color: #fff;
@@ -916,12 +916,12 @@
       cursor: pointer;
       padding: .72rem;
       transition: all .2s;
-      box-shadow: 0 4px 16px rgba(124, 58, 237, .35);
+      box-shadow: 0 5px 14px rgba(55, 91, 77, 0.18);
     }
 
     .btn-primary-modal:hover {
       transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(124, 58, 237, .5);
+      box-shadow: 0 7px 18px rgba(55, 91, 77, 0.22);
     }
 
     .fecha-row {
@@ -961,7 +961,7 @@
       background: var(--primary);
       border-color: var(--primary);
       color: #fff;
-      box-shadow: 0 2px 10px rgba(124, 58, 237, 0.3);
+      box-shadow: none;
     }
 
     /* ── Calendar ──────────────────────────────────────────────── */
@@ -1053,12 +1053,12 @@
 
     .cal-cell.today {
       border-color: var(--primary);
-      background: rgba(124, 58, 237, 0.08);
-      box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.25) inset;
+      background: rgba(82, 121, 111, 0.08);
+      box-shadow: 0 0 0 1px rgba(82, 121, 111, 0.2) inset;
     }
 
     .cal-cell.has-tasks {
-      border-color: rgba(124, 58, 237, 0.35);
+      border-color: rgba(82, 121, 111, 0.28);
     }
 
     .cal-day-num {
@@ -1096,18 +1096,18 @@
     }
 
     .cal-pill.alta {
-      background: rgba(239, 68, 68, .22);
-      color: #fca5a5;
+      background: rgba(183, 107, 103, 0.13);
+      color: var(--danger);
     }
 
     .cal-pill.media {
-      background: rgba(245, 158, 11, .22);
-      color: #fcd34d;
+      background: rgba(167, 122, 59, 0.14);
+      color: var(--warning);
     }
 
     .cal-pill.baja {
-      background: rgba(16, 185, 129, .22);
-      color: #6ee7b7;
+      background: rgba(84, 128, 108, 0.13);
+      color: var(--success);
     }
 
     .cal-pill.completada {
@@ -1186,13 +1186,13 @@
     }
 
     .toast.success {
-      border-color: rgba(16, 185, 129, .4);
-      color: #6ee7b7;
+      border-color: rgba(84, 128, 108, .35);
+      color: var(--success);
     }
 
     .toast.error {
-      border-color: rgba(239, 68, 68, .4);
-      color: #fca5a5;
+      border-color: rgba(183, 107, 103, .35);
+      color: var(--danger);
     }
 
     /* Ruleta */
@@ -1219,16 +1219,16 @@
       padding: .8rem 1.8rem;
       border-radius: 99px;
       border: none;
-      background: linear-gradient(135deg, var(--warning), #f97316);
+      background: var(--primary);
       color: #fff;
       font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+      box-shadow: 0 5px 14px rgba(55, 91, 77, 0.18);
       transition: all .2s;
     }
     .btn-ruleta:hover {
       transform: scale(1.05);
-      box-shadow: 0 8px 25px rgba(245, 158, 11, 0.6);
+      box-shadow: 0 7px 18px rgba(55, 91, 77, 0.22);
     }
     .btn-ruleta:disabled {
       opacity: 0.6;
@@ -1240,19 +1240,367 @@
       min-height: 150px;
       text-align: left;
     }
+
+    .icon {
+      width: 1em;
+      height: 1em;
+      flex: 0 0 auto;
+      display: inline-block;
+      vertical-align: -0.15em;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    button .icon {
+      width: 1.05em;
+      height: 1.05em;
+    }
+
+    :focus-visible {
+      outline: 3px solid rgba(82, 121, 111, 0.35);
+      outline-offset: 2px;
+    }
+
+    #auth-page {
+      background:
+        radial-gradient(ellipse 75% 55% at 15% 10%, rgba(137, 166, 145, 0.16), transparent 62%),
+        radial-gradient(ellipse 60% 45% at 85% 90%, rgba(135, 165, 173, 0.12), transparent 58%),
+        var(--bg);
+    }
+
+    .auth-card {
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    header {
+      background: var(--surface);
+      box-shadow: 0 3px 14px rgba(43, 61, 52, 0.035);
+    }
+
+    .auth-theme-btn:hover,
+    .btn-secondary:hover {
+      border-color: var(--primary);
+    }
+
+    .auth-theme-btn:hover {
+      box-shadow: 0 4px 12px rgba(55, 91, 77, 0.12);
+    }
+
+    .auth-logo .logo-icon {
+      filter: drop-shadow(0 3px 8px rgba(55, 91, 77, 0.18));
+    }
+
+    .tab-btn.active {
+      box-shadow: none;
+    }
+
+    .form-group input:focus {
+      box-shadow: 0 0 0 3px rgba(82, 121, 111, 0.16);
+    }
+
+    .err-msg {
+      background: rgba(183, 107, 103, 0.1);
+      border-color: rgba(183, 107, 103, 0.28);
+      color: var(--danger);
+    }
+
+    .streak-badge.fire {
+      color: var(--success);
+      box-shadow: none;
+    }
+
+    .streak-badge.danger {
+      color: var(--danger);
+      animation: none;
+    }
+
+    .btn-bulk-delete {
+      background: rgba(183, 107, 103, 0.08);
+    }
+
+    .btn-bulk-delete:hover {
+      box-shadow: none;
+    }
+
+    .task-card.vencida-card {
+      border-color: rgba(183, 107, 103, 0.3);
+    }
+
+    .btn-delete:hover {
+      background: rgba(183, 107, 103, 0.1);
+    }
+
+    .toast.success {
+      border-color: rgba(84, 128, 108, 0.35);
+      color: var(--success);
+    }
+
+    .toast.error {
+      border-color: rgba(183, 107, 103, 0.35);
+      color: var(--danger);
+    }
+
+    .spinner {
+      border-color: var(--surface3);
+      border-top-color: var(--primary);
+    }
+
+    .stats-bar {
+      background: transparent;
+      border-bottom: 0;
+      padding-bottom: .4rem;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border-radius: 14px;
+      padding: 1rem;
+    }
+
+    .stat-card.total .stat-num,
+    .stat-card.progreso .stat-num {
+      color: var(--cyan);
+    }
+
+    .stat-card.pendiente .stat-num {
+      color: var(--warning);
+    }
+
+    .stat-card.completada .stat-num {
+      color: var(--success);
+    }
+
+    .filter-btn.active,
+    .view-btn.active,
+    .tab-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: var(--on-primary);
+      box-shadow: none;
+    }
+
+    .btn-primary,
+    .btn-primary-modal,
+    .fab {
+      background: var(--primary);
+      color: var(--on-primary);
+      box-shadow: 0 5px 14px rgba(55, 91, 77, 0.18);
+    }
+
+    .btn-primary:hover,
+    .btn-primary-modal:hover,
+    .fab:hover {
+      background: var(--primary-h);
+      box-shadow: 0 7px 18px rgba(55, 91, 77, 0.22);
+    }
+
+    .btn-ruleta {
+      background: var(--primary);
+      color: var(--on-primary);
+      box-shadow: 0 5px 14px rgba(55, 91, 77, 0.18);
+    }
+
+    .btn-ruleta:hover {
+      background: var(--primary-h);
+      box-shadow: 0 7px 18px rgba(55, 91, 77, 0.22);
+    }
+
+    .task-card {
+      box-shadow: 0 3px 12px rgba(43, 61, 52, 0.035);
+    }
+
+    .task-card:hover {
+      box-shadow: 0 10px 24px rgba(43, 61, 52, 0.09);
+    }
+
+    .task-card.alta::before {
+      background: var(--danger);
+      opacity: .72;
+    }
+
+    .task-card.media::before {
+      background: var(--warning);
+      opacity: .72;
+    }
+
+    .task-card.baja::before {
+      background: var(--success);
+      opacity: .68;
+    }
+
+    .badge-alta,
+    .cal-pill.alta {
+      background: rgba(183, 107, 103, 0.13);
+      color: var(--danger);
+    }
+
+    .badge-media,
+    .cal-pill.media {
+      background: rgba(167, 122, 59, 0.14);
+      color: var(--warning);
+    }
+
+    .badge-baja,
+    .cal-pill.baja {
+      background: rgba(84, 128, 108, 0.13);
+      color: var(--success);
+    }
+
+    .cal-cell.today {
+      background: rgba(82, 121, 111, 0.08);
+      box-shadow: 0 0 0 1px rgba(82, 121, 111, 0.2) inset;
+    }
+
+    .cal-cell.has-tasks {
+      border-color: rgba(82, 121, 111, 0.28);
+    }
+
+    .btn-logout,
+    .btn-delete,
+    .cal-arrow,
+    .auth-theme-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: .4rem;
+    }
+
+    .view-btn,
+    .filter-btn,
+    .btn-secondary,
+    .btn-logout,
+    .btn-delete,
+    .cal-arrow,
+    .auth-theme-btn {
+      transition: background-color .18s ease, border-color .18s ease, color .18s ease, transform .18s ease;
+    }
+
+    .view-toggle-bar {
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .empty-state .empty-icon {
+      width: 2.4rem;
+      height: 2.4rem;
+      color: var(--primary);
+      opacity: .65;
+    }
+
+    @media (max-width: 640px) {
+      header {
+        padding: .8rem 1rem;
+      }
+
+      header > div:last-child {
+        gap: .35rem !important;
+      }
+
+      .user-badge {
+        padding: .35rem;
+      }
+
+      .user-badge .name,
+      .streak-badge {
+        display: none !important;
+      }
+
+      .btn-logout {
+        margin-left: 0;
+        padding: .45rem .6rem;
+      }
+
+      .stats-bar {
+        padding: .8rem 1rem .3rem;
+        gap: .5rem;
+      }
+
+      .stat-card {
+        min-width: 92px;
+        padding: .7rem .55rem;
+      }
+
+      .main-content,
+      #calendar-view {
+        padding: 1rem;
+      }
+
+      .view-toggle-bar {
+        padding: .6rem 1rem .2rem;
+        justify-content: flex-start;
+      }
+
+      .view-toggle-bar .view-btn {
+        margin-right: 0 !important;
+      }
+
+      .view-toggle-bar .view-btn:nth-child(2) {
+        margin-right: auto !important;
+      }
+
+      .task-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .cal-cell {
+        min-height: 58px;
+        padding: .35rem;
+      }
+
+      .cal-grid,
+      .cal-weekdays {
+        gap: .2rem;
+      }
+
+      .cal-pill {
+        padding: .15rem .25rem;
+        font-size: .6rem;
+      }
+
+      .modal {
+        padding: 1.25rem;
+      }
+    }
   </style>
   <script>
-    if (localStorage.getItem('theme') === 'light') {
-      document.documentElement.setAttribute('data-theme', 'light');
-    }
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
   </script>
 </head>
 
 <body>
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+    <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M20.2 15.4A8.5 8.5 0 0 1 8.6 3.8 8.5 8.5 0 1 0 20.2 15.4Z"/></symbol>
+    <symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></symbol>
+    <symbol id="icon-activity" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></symbol>
+    <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5m5 5H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></symbol>
+    <symbol id="icon-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5 5 5-5m-5 5V3"/></symbol>
+    <symbol id="icon-printer" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></symbol>
+    <symbol id="icon-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+    <symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></symbol>
+    <symbol id="icon-shuffle" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></symbol>
+    <symbol id="icon-alert" viewBox="0 0 24 24"><path d="m10.3 3.9-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3.1l-8-14a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4m0 4h.01"/></symbol>
+    <symbol id="icon-select" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="m8 12 3 3 5-6"/></symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M3 6h18m-2 0-.9 14H5.9L5 6m4 0V4h6v2m-5 4v6m4-6v6"/></symbol>
+    <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14m-7-7h14"/></symbol>
+    <symbol id="icon-close" viewBox="0 0 24 24"><path d="m18 6-12 12M6 6l12 12"/></symbol>
+    <symbol id="icon-clipboard" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="18" rx="2"/><path d="M9 4.5V3h6v1.5M9 10h6m-6 4h6"/></symbol>
+    <symbol id="icon-calendar-date" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18m4 4h.01"/></symbol>
+    <symbol id="icon-rotate" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.4-3"/></symbol>
+    <symbol id="icon-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.7 6.6-4.4m-6.6 7 6.6 4"/></symbol>
+    <symbol id="icon-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-8 13h4"/></symbol>
+    <symbol id="icon-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  </svg>
 
   <!-- ── Auth Page ─────────────────────────────────────────────── -->
   <div id="auth-page">
-    <button class="auth-theme-btn" id="btn-theme-auth" onclick="toggleTheme()" title="Cambiar tema">🌓</button>
+    <button class="auth-theme-btn" id="btn-theme-auth" onclick="toggleTheme()" title="Cambiar tema" aria-label="Cambiar tema"><svg class="icon" aria-hidden="true"><use href="#icon-moon"></use></svg></button>
     <div class="auth-card">
       <div class="auth-logo">
         <img src="./icon.svg" class="logo-icon" alt="Taskdle logo" style="height: 3rem; margin: 0 auto 0.5rem;">
@@ -1312,14 +1660,14 @@
       </div>
       <div style="display:flex;align-items:center;gap:.5rem">
         <div class="streak-badge" id="streak-badge" style="display:none" title="Racha de tareas">
-          🔥 <span id="streak-count">0</span>
+          <svg class="icon" aria-hidden="true"><use href="#icon-activity"></use></svg><span id="streak-count">0</span>
         </div>
         <div class="user-badge">
           <div class="avatar" id="user-avatar">U</div>
           <span class="name" id="user-name-label">Usuario</span>
         </div>
-        <button class="btn-logout" id="btn-theme" onclick="toggleTheme()" title="Cambiar tema">🌓</button>
-        <button class="btn-logout" onclick="doLogout()">↩ Salir</button>
+        <button class="btn-logout" id="btn-theme" onclick="toggleTheme()" title="Cambiar tema" aria-label="Cambiar tema"><svg class="icon" aria-hidden="true"><use href="#icon-moon"></use></svg></button>
+        <button class="btn-logout" onclick="doLogout()"><svg class="icon" aria-hidden="true"><use href="#icon-logout"></use></svg>Salir</button>
       </div>
     </header>
 
@@ -1347,12 +1695,12 @@
     </div>
 
     <div class="view-toggle-bar">
-      <button class="view-btn" onclick="exportarCSV()" style="margin-right:.4rem;">⬇�? CSV</button>
-      <button class="view-btn" onclick="exportarPDF()" style="margin-right:auto;">🖨�? PDF</button>
+      <button class="view-btn" onclick="exportarCSV()" style="margin-right:.4rem;"><svg class="icon" aria-hidden="true"><use href="#icon-download"></use></svg> CSV</button>
+      <button class="view-btn" onclick="exportarPDF()" style="margin-right:auto;"><svg class="icon" aria-hidden="true"><use href="#icon-printer"></use></svg> PDF</button>
 
-      <button class="view-btn active" id="vbtn-list" onclick="showView('list')">📋 Lista</button>
-      <button class="view-btn" id="vbtn-cal" onclick="showView('calendar')">📅 Calendario</button>
-      <button class="view-btn" id="vbtn-ruleta" onclick="showView('ruleta')">🎲 Ruleta</button>
+      <button class="view-btn active" id="vbtn-list" onclick="showView('list')"><svg class="icon" aria-hidden="true"><use href="#icon-list"></use></svg> Lista</button>
+      <button class="view-btn" id="vbtn-cal" onclick="showView('calendar')"><svg class="icon" aria-hidden="true"><use href="#icon-calendar"></use></svg> Calendario</button>
+      <button class="view-btn" id="vbtn-ruleta" onclick="showView('ruleta')"><svg class="icon" aria-hidden="true"><use href="#icon-shuffle"></use></svg> Ruleta</button>
     </div>
 
     <div class="main-content" id="list-view">
@@ -1362,12 +1710,12 @@
         <button class="filter-btn" data-filter="PENDIENTE" onclick="setFilter(this)">Pendientes</button>
         <button class="filter-btn" data-filter="EN_PROGRESO" onclick="setFilter(this)">En progreso</button>
         <button class="filter-btn" data-filter="COMPLETADA" onclick="setFilter(this)">Completadas</button>
-        <button class="filter-btn" data-filter="VENCIDA" onclick="setFilter(this)">⚠ Vencidas</button>
-        <button class="filter-btn" id="btn-toggle-select" onclick="toggleSelectMode()" style="margin-left: .5rem;">☑ Seleccionar</button>
-        <button class="filter-btn" id="btn-select-all" onclick="seleccionarTodas()" style="display: none;">✅ Todas</button>
+        <button class="filter-btn" data-filter="VENCIDA" onclick="setFilter(this)"><svg class="icon" aria-hidden="true"><use href="#icon-alert"></use></svg> Vencidas</button>
+        <button class="filter-btn" id="btn-toggle-select" onclick="toggleSelectMode()" style="margin-left: .5rem;"><svg class="icon" aria-hidden="true"><use href="#icon-select"></use></svg> Seleccionar</button>
+        <button class="filter-btn" id="btn-select-all" onclick="seleccionarTodas()" style="display: none;"><svg class="icon" aria-hidden="true"><use href="#icon-check"></use></svg> Todas</button>
         
         <div class="bulk-action-bar" id="bulk-action-bar" style="margin-left:auto; display:none;">
-          <button class="btn-bulk-delete" onclick="borrarSeleccionadas()">🗑 Borrar (<span id="bulk-count">0</span>)</button>
+          <button class="btn-bulk-delete" onclick="borrarSeleccionadas()"><svg class="icon" aria-hidden="true"><use href="#icon-trash"></use></svg> Borrar (<span id="bulk-count">0</span>)</button>
         </div>
       </div>
       <div class="task-grid" id="task-grid"></div>
@@ -1376,9 +1724,9 @@
     <!-- ── Calendar View ──────────────────────────────────────── -->
     <div id="calendar-view">
       <div class="cal-nav">
-        <button class="cal-arrow" onclick="prevMonth()">&#8592;</button>
+        <button class="cal-arrow" onclick="prevMonth()" aria-label="Mes anterior"><svg class="icon" aria-hidden="true"><use href="#icon-chevron-left"></use></svg></button>
         <h3 id="cal-title">Marzo 2026</h3>
-        <button class="cal-arrow" onclick="nextMonth()">&#8594;</button>
+        <button class="cal-arrow" onclick="nextMonth()" aria-label="Mes siguiente"><svg class="icon" aria-hidden="true"><use href="#icon-chevron-right"></use></svg></button>
       </div>
       <div class="cal-weekdays">
         <div class="cal-weekday">Lun</div>
@@ -1395,23 +1743,23 @@
     <!-- ── Ruleta View ──────────────────────────────────────── -->
     <div id="ruleta-view">
       <div class="ruleta-container">
-        <button class="btn-ruleta" id="btn-spin" onclick="tirarRuleta()">🎰 Tirar Ruleta</button>
+        <button class="btn-ruleta" id="btn-spin" onclick="tirarRuleta()"><svg class="icon" aria-hidden="true"><use href="#icon-rotate"></use></svg> Tirar Ruleta</button>
         <div class="ruleta-result" id="ruleta-result">
-          <div class="empty-state" style="padding:2rem 0"><div class="empty-icon">🎲</div><p>Gira la ruleta para obtener tu próxima tarea.</p></div>
+          <div class="empty-state" style="padding:2rem 0"><svg class="empty-icon icon" aria-hidden="true"><use href="#icon-shuffle"></use></svg><p>Gira la ruleta para obtener tu próxima tarea.</p></div>
         </div>
       </div>
     </div>
 
     <!-- FAB -->
-    <button class="fab" id="fab-btn" onclick="openModal()" title="Nueva tarea">+</button>
+    <button class="fab" id="fab-btn" onclick="openModal()" title="Nueva tarea" aria-label="Nueva tarea"><svg class="icon" aria-hidden="true"><use href="#icon-plus"></use></svg></button>
   </div>
 
   <!-- ── Modal Nueva Tarea ──────────────────────────────────────── -->
   <div class="modal-overlay" id="modal-overlay">
     <div class="modal">
       <div class="modal-header">
-        <h3>✨ Nueva Tarea</h3>
-        <button class="btn-close" onclick="closeModal()">✕</button>
+        <h3>Nueva tarea</h3>
+        <button class="btn-close" onclick="closeModal()" aria-label="Cerrar"><svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg></button>
       </div>
       <div class="modal-form">
         <div class="form-group">
@@ -1437,16 +1785,16 @@
           <div class="form-group">
             <label for="m-tipo">Tipo</label>
             <select id="m-tipo" onchange="toggleFecha()">
-              <option value="SIMPLE">🗒 Tarea simple</option>
-              <option value="FECHA">📅 Con fecha límite</option>
+              <option value="SIMPLE">Tarea simple</option>
+              <option value="FECHA">Con fecha límite</option>
             </select>
           </div>
           <div class="form-group">
             <label for="m-prio">Prioridad</label>
             <select id="m-prio">
-              <option value="ALTA">🔴 Alta</option>
-              <option value="MEDIA" selected>🟡 Media</option>
-              <option value="BAJA">🟢 Baja</option>
+              <option value="ALTA">Alta</option>
+              <option value="MEDIA" selected>Media</option>
+              <option value="BAJA">Baja</option>
             </select>
           </div>
         </div>
@@ -1467,6 +1815,19 @@
   <div class="toast-container" id="toast-container"></div>
 
   <script>
+    function icon(name, className = '') {
+      return `<svg class="icon ${className}" aria-hidden="true" focusable="false"><use href="#icon-${name}"></use></svg>`;
+    }
+
+    function updateThemeIcons() {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const name = isDark ? 'sun' : 'moon';
+      document.querySelectorAll('#btn-theme-auth, #btn-theme').forEach(button => {
+        button.innerHTML = icon(name);
+      });
+      document.querySelector('meta[name="theme-color"]').content = isDark ? '#202a27' : '#f4f6f3';
+    }
+
     // ── Configuración de API ──────────────────────────────────────────────────
     const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
                      ? 'http://localhost:8080'
@@ -1535,19 +1896,22 @@
     function toggleTheme() {
       document.documentElement.classList.add('theme-switching');
       
-      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-      if (isLight) {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      if (isDark) {
         document.documentElement.removeAttribute('data-theme');
-        localStorage.setItem('theme', 'dark');
-      } else {
-        document.documentElement.setAttribute('data-theme', 'light');
         localStorage.setItem('theme', 'light');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('theme', 'dark');
       }
+      updateThemeIcons();
 
       setTimeout(() => {
         document.documentElement.classList.remove('theme-switching');
       }, 400);
     }
+
+    updateThemeIcons();
 
     // ── Auth ─────────────────────────────────────────────────────
     function showTab(tab) {
@@ -1606,7 +1970,7 @@
         if (data.ok) {
           currentUser = data.usuario;
           enterDashboard();
-          toast('¡Cuenta creada! Bienvenido 🎉', 'success');
+          toast('¡Cuenta creada! Bienvenido', 'success');
         } else {
           if (data.error === 'Network' || !res.ok) {
             showErr('err-registro', 'No se pudo conectar con el servidor (' + API_BASE + ')');
@@ -1737,7 +2101,7 @@
 
           if (recienLlegadas.length > 0 && allTasks.length > 0) {
             const t = recienLlegadas[0];
-            toast(`🔔 Nueva tarea recibida: "${t.titulo}"`, 'info');
+            toast(`Nueva tarea recibida: "${t.titulo}"`, 'info');
           }
 
           allTasks = newTasks;
@@ -1788,7 +2152,7 @@
         listView.style.display = 'none';
         calView.classList.remove('visible');
         rulView.classList.add('visible');
-        document.getElementById('ruleta-result').innerHTML = '<div class="empty-state" style="padding:2rem 0"><div class="empty-icon">🎲</div><p>Gira la ruleta para obtener tu próxima tarea.</p></div>';
+        document.getElementById('ruleta-result').innerHTML = `<div class="empty-state" style="padding:2rem 0">${icon('shuffle', 'empty-icon')}<p>Gira la ruleta para obtener tu próxima tarea.</p></div>`;
       }
       dismissPopover();
     }
@@ -1823,7 +2187,7 @@
         const msg = activeFilter === 'ALL'
           ? 'Aún no tienes tareas. ¡Crea una con el botón ＋!'
           : 'No hay tareas para este filtro.';
-        grid.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><p>${msg}</p></div>`;
+        grid.innerHTML = `<div class="empty-state">${icon('clipboard', 'empty-icon')}<p>${msg}</p></div>`;
         return;
       }
 
@@ -1836,23 +2200,23 @@
       const titleClass = t.estado === 'COMPLETADA' ? 'completada-title' : '';
       const cardClass = t.vencida ? 'vencida-card' : '';
 
-      let metaInfo = `<span>🗓 Creada: ${t.fechaCreacion}</span>`;
+      let metaInfo = `<span>${icon('calendar-date')} Creada: ${t.fechaCreacion}</span>`;
       if (t.fechaLimite) {
         if (t.vencida) {
-          metaInfo += `<span class="vencida-tag">⚠ Vencida hace ${Math.abs(t.diasRestantes)} día(s)</span>`;
+          metaInfo += `<span class="vencida-tag">${icon('alert')} Vencida hace ${Math.abs(t.diasRestantes)} día(s)</span>`;
         } else if (t.estado !== 'COMPLETADA') {
           const dias = t.diasRestantes;
-          const tag = dias === 0 ? '⚡ ¡Vence hoy!'
-            : dias === 1 ? '⚡ Vence mañana'
-              : dias <= 7 ? `� � ${dias} días restantes`
-                : `📅 Límite: ${t.fechaLimite}`;
+          const tag = dias === 0 ? '¡Vence hoy!'
+            : dias === 1 ? 'Vence mañana'
+              : dias <= 7 ? `${dias} días restantes`
+                : `${icon('calendar-date')} Límite: ${t.fechaLimite}`;
           metaInfo += `<span>${tag}</span>`;
         } else {
-          metaInfo += `<span class="ok-tag">✔ Completada a tiempo</span>`;
+          metaInfo += `<span class="ok-tag">${icon('check')} Completada a tiempo</span>`;
         }
       }
 
-      const stateLabel = { PENDIENTE: '� � Pendiente', EN_PROGRESO: '🔄 En progreso', COMPLETADA: '✅ Completada' };
+      const stateLabel = { PENDIENTE: 'Pendiente', EN_PROGRESO: 'En progreso', COMPLETADA: 'Completada' };
 
       // Subtareas HTML
       let subtareasHtml = '';
@@ -1901,8 +2265,8 @@
         <option value="EN_PROGRESO" ${t.estado === 'EN_PROGRESO' ? 'selected' : ''}>${stateLabel.EN_PROGRESO}</option>
         <option value="COMPLETADA"  ${t.estado === 'COMPLETADA' ? 'selected' : ''}>${stateLabel.COMPLETADA}</option>
       </select>
-      <button class="btn-delete" onclick="compartirTarea(${t.id})" title="Compartir tarea" style="border-color: var(--primary); color: var(--primary);">🔗</button>
-      <button class="btn-delete" onclick="eliminarTarea(${t.id})" title="Eliminar tarea">🗑</button>
+      <button class="btn-delete" onclick="compartirTarea(${t.id})" title="Compartir tarea" aria-label="Compartir tarea" style="border-color: var(--primary); color: var(--primary);">${icon('share')}</button>
+      <button class="btn-delete" onclick="eliminarTarea(${t.id})" title="Eliminar tarea" aria-label="Eliminar tarea">${icon('trash')}</button>
     </div>
   </div>`;
     }
@@ -1924,7 +2288,7 @@
           renderStats();
           renderTareas();
           if (data.rachaCambiada) {
-             toast(`¡Racha aumentada a ${data.rachaActual} días! 🔥`, 'success');
+             toast(`¡Racha aumentada a ${data.rachaActual} días!`, 'success');
              loadRacha();
           } else {
              toast('Estado actualizado ✓', 'success');
@@ -1998,10 +2362,10 @@
         const data = await res.json();
         if (data.ok) {
            if (data.rachaCambiada) {
-               toast(`¡Racha aumentada a ${data.rachaActual} días! 🔥`, 'success');
+               toast(`¡Racha aumentada a ${data.rachaActual} días!`, 'success');
                loadRacha();
            } else if (data.nuevoEstado === 'COMPLETADA') {
-               toast('Tarea auto-completada ✅', 'success');
+               toast('Tarea auto-completada', 'success');
            }
            loadTareas();
         } else {
@@ -2044,7 +2408,7 @@
            loadTareas();
        }
        btn.disabled = false;
-       btn.innerHTML = `🗑 Borrar (<span id="bulk-count">${selectedTaskIds.size}</span>)`;
+       btn.innerHTML = `${icon('trash')} Borrar (<span id="bulk-count">${selectedTaskIds.size}</span>)`;
     }
 
     function toggleSelectMode() {
@@ -2055,7 +2419,7 @@
       
       if (isSelectMode) {
           btn.classList.add('active');
-          btn.textContent = '� � Cancelar';
+          btn.textContent = 'Cancelar';
           btnAll.style.display = 'inline-block';
           grid.classList.add('select-mode');
       } else {
@@ -2070,7 +2434,7 @@
         const grid = document.getElementById('task-grid');
         if(btn) {
            btn.classList.remove('active');
-           btn.textContent = '☑ Seleccionar';
+           btn.innerHTML = `${icon('select')} Seleccionar`;
         }
         if(btnAll) btnAll.style.display = 'none';
         if(grid) grid.classList.remove('select-mode');
@@ -2269,13 +2633,13 @@
       dismissPopover();
       const pop = document.createElement('div');
       pop.className = 'cal-popover';
-      const stateLabel = { PENDIENTE: '�?� Pendiente', EN_PROGRESO: '🔄 En progreso', COMPLETADA: '✅ Completada' };
-      const prioLabel = { ALTA: '🔴 Alta', MEDIA: '🟡 Media', BAJA: '🟢 Baja' };
+      const stateLabel = { PENDIENTE: 'Pendiente', EN_PROGRESO: 'En progreso', COMPLETADA: 'Completada' };
+      const prioLabel = { ALTA: 'Alta', MEDIA: 'Media', BAJA: 'Baja' };
       pop.innerHTML = `
     <strong>${escHtml(t.titulo)}</strong>
     <span>${prioLabel[t.prioridad] || t.prioridad}</span>
     <span>${stateLabel[t.estado] || t.estado}</span>
-    <span>📅 Límite: ${t.fechaLimite}</span>
+    <span>${icon('calendar-date')} Límite: ${t.fechaLimite}</span>
     ${t.descripcion ? `<span style="margin-top:.3rem;color:var(--text);font-size:.75rem">${escHtml(t.descripcion)}</span>` : ''}
   `;
       document.body.appendChild(pop);
@@ -2302,7 +2666,7 @@
       const btn = document.getElementById('btn-spin');
       
       if (tasks.length === 0) {
-        resultDiv.innerHTML = '<div class="empty-state" style="padding:2rem 0"><div class="empty-icon">�?�</div><p>¡No tienes tareas pendientes! Tómate un descanso.</p></div>';
+        resultDiv.innerHTML = `<div class="empty-state" style="padding:2rem 0">${icon('check', 'empty-icon')}<p>¡No tienes tareas pendientes! Tómate un descanso.</p></div>`;
         return;
       }
 
@@ -2394,12 +2758,12 @@
         <head>
           <title>Reporte de Tareas - ${currentUser}</title>
           <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.5; padding: 2rem; max-width: 800px; margin: auto; }
-            h1 { color: #5b21b6; border-bottom: 2px solid #ddd; padding-bottom: .5rem; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #26332e; line-height: 1.5; padding: 2rem; max-width: 800px; margin: auto; }
+            h1 { color: #52796f; border-bottom: 2px solid #e3e9e4; padding-bottom: .5rem; }
             table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-            th, td { border: 1px solid #ccc; padding: .5rem; text-align: left; }
-            th { background-color: #f3f4f6; }
-            .badge { font-size: .8rem; padding: 2px 6px; border-radius: 4px; background: #eee; }
+            th, td { border: 1px solid #dfe6e0; padding: .5rem; text-align: left; }
+            th { background-color: #f1f4f1; }
+            .badge { font-size: .8rem; padding: 2px 6px; border-radius: 4px; background: #f1f4f1; }
             @media print {
               body { padding: 0; }
               button { display: none; }
@@ -2409,7 +2773,10 @@
         <body>
           <h1>Resumen de Tareas de ${currentUser}</h1>
           <p>Generado el: ${new Date().toLocaleString()}</p>
-          <button onclick="window.print()" style="padding: 10px 20px; background: #5b21b6; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 20px;">🖨�? Imprimir / Guardar como PDF</button>
+          <button onclick="window.print()" style="padding: 10px 20px; background: #52796f; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 20px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+            Imprimir / Guardar como PDF
+          </button>
           <table>
             <thead>
               <tr>
