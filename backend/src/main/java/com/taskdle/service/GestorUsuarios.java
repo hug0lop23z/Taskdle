@@ -76,13 +76,19 @@ public class GestorUsuarios {
     }
 
     public Usuario getUsuario(String nombre) {
+        if (nombre == null) return null;
         if (Database.isAvailable()) {
             try {
                 Usuario u = usuarioDao.buscar(nombre);
                 if (u != null) return u;
             } catch (Exception ignored) {}
         }
-        return usuariosMemoria.get(nombre);
+        for (Map.Entry<String, Usuario> entry : usuariosMemoria.entrySet()) {
+            if (entry.getKey().equalsIgnoreCase(nombre.trim())) {
+                return entry.getValue();
+            }
+        }
+        return null;
     }
 
     // ─── Tareas ──────────────────────────────────────────────────────────────
@@ -132,20 +138,23 @@ public class GestorUsuarios {
     }
 
     public boolean compartirTarea(int id, String usuarioOrigen, String usuarioDestino) {
-        Usuario target = getUsuario(usuarioDestino);
+        if (usuarioDestino == null || usuarioDestino.isBlank()) return false;
+        if (usuarioOrigen != null && usuarioOrigen.equalsIgnoreCase(usuarioDestino.trim())) return false;
+        Usuario target = getUsuario(usuarioDestino.trim());
         if (target == null) return false;
+        String nombreRealDestino = target.getNombreUsuario();
 
         boolean compartido = false;
         if (Database.isAvailable()) {
             try {
-                compartido = tareaDao.compartir(id, usuarioDestino);
+                compartido = tareaDao.compartir(id, nombreRealDestino);
             } catch (Exception ignored) {}
         }
 
         // Modo memoria
         Tarea t = buscarTarea(id, usuarioOrigen);
         if (t != null) {
-            List<Tarea> listaDestino = tareasMemoria.computeIfAbsent(usuarioDestino, k -> Collections.synchronizedList(new ArrayList<>()));
+            List<Tarea> listaDestino = tareasMemoria.computeIfAbsent(nombreRealDestino, k -> Collections.synchronizedList(new ArrayList<>()));
             boolean yaExiste = listaDestino.stream().anyMatch(item -> item.getId() == id);
             if (!yaExiste) {
                 listaDestino.add(t);

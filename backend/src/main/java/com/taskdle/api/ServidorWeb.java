@@ -209,12 +209,22 @@ public class ServidorWeb {
             String compCon = extractJson(body, "compartirCon");
 
             if (nombre != null && compCon != null && !compCon.isBlank()) {
-                boolean ok = gestor.compartirTarea(id, nombre, compCon.trim());
+                String target = compCon.trim();
+                if (nombre.equalsIgnoreCase(target)) {
+                    respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"No puedes compartir una tarea contigo mismo\"}");
+                    return;
+                }
+                Usuario targetUser = gestor.getUsuario(target);
+                if (targetUser == null) {
+                    respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"El usuario '" + esc(target) + "' no existe. Debe registrarse primero.\"}");
+                    return;
+                }
+                boolean ok = gestor.compartirTarea(id, nombre, target);
                 if (ok) {
                     respond(ex, 200, "application/json", "{\"ok\":true}");
                     return;
                 } else {
-                    respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"No se pudo compartir. Verifica que el usuario exista.\"}");
+                    respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"Error al compartir la tarea\"}");
                     return;
                 }
             }

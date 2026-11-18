@@ -1895,7 +1895,7 @@
         if (data.ok) {
           toast(`Tarea compartida con ${user}`, 'success');
         } else {
-          toast('Error al compartir. Verifica el usuario.', 'error');
+          toast(data.mensaje || 'Error al compartir. Verifica el usuario.', 'error');
         }
       } catch (e) {
         toast('Error de conexión', 'error');
