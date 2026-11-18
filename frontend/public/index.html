@@ -2089,6 +2089,7 @@
     let selectedTaskIds = new Set();
     let isSelectMode = false;
     const expandedTaskDetails = new Set();
+    const renderedTaskSignatures = new Map();
 
     // ── Theme ────────────────────────────────────────────────────
     function toggleTheme() {
@@ -2264,13 +2265,17 @@
         return;
       }
 
+      let renderedCachedTasks = false;
       try {
         const cachedTasks = localStorage.getItem(cacheKey);
         if (cachedTasks !== null) {
           const parsedTasks = JSON.parse(cachedTasks);
           if (Array.isArray(parsedTasks)) {
+            const cachedTasksChanged = JSON.stringify(allTasks) !== JSON.stringify(parsedTasks);
+            const gridHasContent = document.getElementById('task-grid').childElementCount > 0;
             allTasks = parsedTasks;
-            renderTaskSnapshot();
+            if (cachedTasksChanged || !gridHasContent) renderTaskSnapshot();
+            renderedCachedTasks = true;
           } else {
             console.error('La caché de tareas no tiene un formato válido');
           }
@@ -2284,9 +2289,12 @@
         if (!res.ok) throw new Error('La solicitud de tareas no fue exitosa');
         const tasks = await res.json();
         if (!Array.isArray(tasks)) throw new Error('La respuesta de tareas no tiene un formato válido');
+        const tasksChanged = JSON.stringify(allTasks) !== JSON.stringify(tasks);
         allTasks = tasks;
-        saveCache();
-        renderTaskSnapshot();
+        if (!renderedCachedTasks || tasksChanged) {
+          saveCache();
+          renderTaskSnapshot();
+        }
       } catch (e) {
         console.error('Error al cargar las tareas', e);
         toast(allTasks.length ? 'Sin conexión con el servidor; se muestran las tareas guardadas' : 'Error al cargar las tareas', 'error');
@@ -2421,11 +2429,42 @@
         const msg = activeFilter === 'ALL'
           ? 'Aún no tienes tareas. ¡Crea una con el botón ＋!'
           : 'No hay tareas para este filtro.';
+        renderedTaskSignatures.clear();
         grid.innerHTML = `<div class="empty-state">${icon('clipboard', 'empty-icon')}<p>${msg}</p></div>`;
         return;
       }
 
-      grid.innerHTML = tasks.map(t => taskCardHTML(t)).join('');
+      const emptyState = grid.querySelector('.empty-state');
+      if (emptyState) emptyState.remove();
+      const currentCards = new Map(
+        Array.from(grid.querySelectorAll('.task-card'), card => [card.id, card])
+      );
+
+      tasks.forEach((task, index) => {
+        const cardId = `card-${task.id}`;
+        let card = currentCards.get(cardId);
+        const signature = JSON.stringify(task);
+
+        if (!card || renderedTaskSignatures.get(cardId) !== signature) {
+          const template = document.createElement('template');
+          template.innerHTML = taskCardHTML(task).trim();
+          const updatedCard = template.content.firstElementChild;
+          if (!updatedCard) throw new Error('No se pudo crear la tarjeta de tarea');
+          if (card) card.replaceWith(updatedCard);
+          card = updatedCard;
+          renderedTaskSignatures.set(cardId, signature);
+        }
+
+        currentCards.delete(cardId);
+        if (grid.children[index] !== card) {
+          grid.insertBefore(card, grid.children[index] || null);
+        }
+      });
+
+      currentCards.forEach((card, cardId) => {
+        card.remove();
+        renderedTaskSignatures.delete(cardId);
+      });
     }
 
     function taskCardHTML(t) {
