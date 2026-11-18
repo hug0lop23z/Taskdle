@@ -2222,6 +2222,18 @@
       startAutoSync();
     }
 
+    function renderTaskSnapshot() {
+      const validIds = new Set(allTasks.map(t => t.id));
+      for (const id of selectedTaskIds) {
+        if (!validIds.has(id)) selectedTaskIds.delete(id);
+      }
+
+      updateBulkBar();
+      renderStats();
+      renderTareas();
+      if (activeView === 'calendar') renderCalendar();
+    }
+
     async function loadRacha() {
       try {
         const res = await apiFetch(API_BASE + `/api/racha?usuario=${encodeURIComponent(currentUser)}`);
@@ -2245,30 +2257,39 @@
     }
 
     async function loadTareas() {
+      const cacheKey = 'cachedTasks_' + currentUser;
       if (!navigator.onLine) {
-        allTasks = JSON.parse(localStorage.getItem('cachedTasks_' + currentUser) || '[]');
-        const validIds = new Set(allTasks.map(t => t.id));
-        for (const id of selectedTaskIds) if (!validIds.has(id)) selectedTaskIds.delete(id);
-        updateBulkBar(); renderStats(); renderTareas();
-        if (activeView === 'calendar') renderCalendar();
+        allTasks = JSON.parse(localStorage.getItem(cacheKey) || '[]');
+        renderTaskSnapshot();
         return;
       }
+
+      try {
+        const cachedTasks = localStorage.getItem(cacheKey);
+        if (cachedTasks !== null) {
+          const parsedTasks = JSON.parse(cachedTasks);
+          if (Array.isArray(parsedTasks)) {
+            allTasks = parsedTasks;
+            renderTaskSnapshot();
+          } else {
+            console.error('La caché de tareas no tiene un formato válido');
+          }
+        }
+      } catch (e) {
+        console.error('No se pudo recuperar la caché de tareas', e);
+      }
+
       try {
         const res = await apiFetch(API_BASE + `/api/tareas?usuario=${encodeURIComponent(currentUser)}`);
-        allTasks = await res.json();
+        if (!res.ok) throw new Error('La solicitud de tareas no fue exitosa');
+        const tasks = await res.json();
+        if (!Array.isArray(tasks)) throw new Error('La respuesta de tareas no tiene un formato válido');
+        allTasks = tasks;
         saveCache();
-        
-        const validIds = new Set(allTasks.map(t => t.id));
-        for (const id of selectedTaskIds) {
-           if (!validIds.has(id)) selectedTaskIds.delete(id);
-        }
-        updateBulkBar();
-        
-        renderStats();
-        renderTareas();
-        if (activeView === 'calendar') renderCalendar();
+        renderTaskSnapshot();
       } catch (e) {
-        toast('Error al cargar las tareas', 'error');
+        console.error('Error al cargar las tareas', e);
+        toast(allTasks.length ? 'Sin conexión con el servidor; se muestran las tareas guardadas' : 'Error al cargar las tareas', 'error');
       }
     }
 
