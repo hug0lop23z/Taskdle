@@ -56,7 +56,6 @@ public class GestorUsuarios {
             }
         }
 
-        // Modo memoria (siempre disponible)
         if (usuariosMemoria.containsKey(nombre)) return 2;
         usuariosMemoria.put(nombre, new Usuario(nombre, password));
         tareasMemoria.putIfAbsent(nombre, Collections.synchronizedList(new ArrayList<>()));
@@ -98,20 +97,63 @@ public class GestorUsuarios {
     }
 
     public int crearTarea(Tarea t, String usuario) {
+        return crearTarea(t, usuario, null);
+    }
+
+    public int crearTarea(Tarea t, String usuario, String compartirCon) {
+        int id = -1;
         if (Database.isAvailable()) {
             try {
-                int id = tareaDao.insertar(t, usuario);
-                if (id > 0) return id;
+                id = tareaDao.insertar(t, usuario);
             } catch (Exception ignored) {}
         }
 
-        int id = contadorId.getAndIncrement();
-        t.setId(id);
-        for (int i = 0; i < t.getSubtareas().size(); i++) {
-            t.getSubtareas().get(i).setId(i + 1);
+        if (id <= 0) {
+            id = contadorId.getAndIncrement();
+            t.setId(id);
+            for (int i = 0; i < t.getSubtareas().size(); i++) {
+                t.getSubtareas().get(i).setId(i + 1);
+            }
+            tareasMemoria.computeIfAbsent(usuario, k -> Collections.synchronizedList(new ArrayList<>())).add(t);
         }
-        tareasMemoria.computeIfAbsent(usuario, k -> Collections.synchronizedList(new ArrayList<>())).add(t);
+
+        // Procesar usuarios para compartir
+        if (compartirCon != null && !compartirCon.isBlank()) {
+            String[] destinos = compartirCon.split(",");
+            for (String dest : destinos) {
+                String d = dest.trim();
+                if (!d.isEmpty() && !d.equalsIgnoreCase(usuario)) {
+                    compartirTarea(t.getId(), usuario, d);
+                }
+            }
+        }
+
         return id;
+    }
+
+    public boolean compartirTarea(int id, String usuarioOrigen, String usuarioDestino) {
+        Usuario target = getUsuario(usuarioDestino);
+        if (target == null) return false;
+
+        boolean compartido = false;
+        if (Database.isAvailable()) {
+            try {
+                compartido = tareaDao.compartir(id, usuarioDestino);
+            } catch (Exception ignored) {}
+        }
+
+        // Modo memoria
+        Tarea t = buscarTarea(id, usuarioOrigen);
+        if (t != null) {
+            List<Tarea> listaDestino = tareasMemoria.computeIfAbsent(usuarioDestino, k -> Collections.synchronizedList(new ArrayList<>()));
+            boolean yaExiste = listaDestino.stream().anyMatch(item -> item.getId() == id);
+            if (!yaExiste) {
+                listaDestino.add(t);
+            }
+            compartido = true;
+        }
+
+        return compartido;
     }
 
     public boolean actualizarEstado(int id, String usuario, Estado nuevoEstado) {

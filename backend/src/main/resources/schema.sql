@@ -26,3 +26,9 @@ CREATE TABLE IF NOT EXISTS subtareas (
     completada BOOLEAN NOT NULL DEFAULT FALSE,
     orden INT NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS tareas_compartidas (
+    tarea_id INT NOT NULL REFERENCES tareas(id) ON DELETE CASCADE,
+    usuario VARCHAR(50) NOT NULL REFERENCES usuarios(nombre) ON DELETE CASCADE,
+    PRIMARY KEY (tarea_id, usuario)
+);

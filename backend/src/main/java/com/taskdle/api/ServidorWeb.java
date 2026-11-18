@@ -168,6 +168,7 @@ public class ServidorWeb {
             String descripcion = extractJson(body, "descripcion");
             String prioStr     = extractJson(body, "prioridad");
             String subtareasStr = extractJson(body, "subtareas");
+            String compartirCon = extractJson(body, "compartirCon");
 
             if (nombre == null || titulo == null || titulo.isBlank()) {
                 respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"Datos inválidos\"}");
@@ -190,12 +191,34 @@ public class ServidorWeb {
                 }
             }
 
-            int newId = gestor.crearTarea(tarea, nombre);
+            int newId = gestor.crearTarea(tarea, nombre, compartirCon);
             if (newId > 0) {
                 respond(ex, 200, "application/json", "{\"ok\":true,\"id\":" + newId + "}");
             } else {
                 respond(ex, 500, "application/json", "{\"ok\":false,\"mensaje\":\"Error al guardar en base de datos\"}");
             }
+            return;
+        }
+
+        // POST /api/tareas/{id}/compartir
+        Matcher mShare = Pattern.compile("/api/tareas/(\\d+)/compartir").matcher(path);
+        if ("POST".equals(method) && mShare.matches()) {
+            int id = Integer.parseInt(mShare.group(1));
+            String body = readBody(ex);
+            String nombre = extractJson(body, "usuario");
+            String compCon = extractJson(body, "compartirCon");
+
+            if (nombre != null && compCon != null && !compCon.isBlank()) {
+                boolean ok = gestor.compartirTarea(id, nombre, compCon.trim());
+                if (ok) {
+                    respond(ex, 200, "application/json", "{\"ok\":true}");
+                    return;
+                } else {
+                    respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"No se pudo compartir. Verifica que el usuario exista.\"}");
+                    return;
+                }
+            }
+            respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"Datos incompletos\"}");
             return;
         }
 

@@ -15,9 +15,13 @@ public class TareaDao {
         List<Tarea> lista = new ArrayList<>();
         try (Connection c = Database.getConnection();
              PreparedStatement ps = c.prepareStatement(
-                 "SELECT id, tipo, titulo, descripcion, prioridad, estado, fecha_creacion, fecha_limite " +
-                 "FROM tareas WHERE dueno = ? ORDER BY id")) {
+                 "SELECT DISTINCT t.id, t.tipo, t.titulo, t.descripcion, t.prioridad, t.estado, t.fecha_creacion, t.fecha_limite " +
+                 "FROM tareas t " +
+                 "LEFT JOIN tareas_compartidas tc ON t.id = tc.tarea_id " +
+                 "WHERE t.dueno = ? OR tc.usuario = ? " +
+                 "ORDER BY t.id")) {
             ps.setString(1, usuario);
+            ps.setString(2, usuario);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 Tarea t = mapTarea(rs);
@@ -35,10 +39,13 @@ public class TareaDao {
     public Tarea buscarPorId(int id, String usuario) {
         try (Connection c = Database.getConnection();
              PreparedStatement ps = c.prepareStatement(
-                 "SELECT id, tipo, titulo, descripcion, prioridad, estado, fecha_creacion, fecha_limite " +
-                 "FROM tareas WHERE id = ? AND dueno = ?")) {
+                 "SELECT DISTINCT t.id, t.tipo, t.titulo, t.descripcion, t.prioridad, t.estado, t.fecha_creacion, t.fecha_limite " +
+                 "FROM tareas t " +
+                 "LEFT JOIN tareas_compartidas tc ON t.id = tc.tarea_id " +
+                 "WHERE t.id = ? AND (t.dueno = ? OR tc.usuario = ?)")) {
             ps.setInt(1, id);
             ps.setString(2, usuario);
+            ps.setString(3, usuario);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 Tarea t = mapTarea(rs);
@@ -70,7 +77,6 @@ public class TareaDao {
             if (rs.next()) {
                 int newId = rs.getInt(1);
                 t.setId(newId);
-                // Insertar subtareas
                 for (int i = 0; i < t.getSubtareas().size(); i++) {
                     insertarSubtarea(t.getSubtareas().get(i), newId, i, c);
                 }
@@ -82,13 +88,27 @@ public class TareaDao {
         return -1;
     }
 
+    public boolean compartir(int tareaId, String usuarioDestino) {
+        try (Connection c = Database.getConnection();
+             PreparedStatement ps = c.prepareStatement(
+                 "INSERT INTO tareas_compartidas(tarea_id, usuario) VALUES(?, ?) ON CONFLICT DO NOTHING")) {
+            ps.setInt(1, tareaId);
+            ps.setString(2, usuarioDestino);
+            return ps.executeUpdate() >= 0;
+        } catch (SQLException e) {
+            System.err.println("[TareaDao] compartir: " + e.getMessage());
+            return false;
+        }
+    }
+
     public boolean actualizarEstado(int id, String usuario, Estado nuevoEstado) {
         try (Connection c = Database.getConnection();
              PreparedStatement ps = c.prepareStatement(
-                 "UPDATE tareas SET estado=? WHERE id=? AND dueno=?")) {
+                 "UPDATE tareas SET estado=? WHERE id=? AND (dueno=? OR id IN (SELECT tarea_id FROM tareas_compartidas WHERE usuario=?))")) {
             ps.setString(1, nuevoEstado.name());
             ps.setInt(2, id);
             ps.setString(3, usuario);
+            ps.setString(4, usuario);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("[TareaDao] actualizarEstado: " + e.getMessage());
@@ -97,12 +117,21 @@ public class TareaDao {
     }
 
     public boolean eliminar(int id, String usuario) {
-        try (Connection c = Database.getConnection();
-             PreparedStatement ps = c.prepareStatement(
-                 "DELETE FROM tareas WHERE id=? AND dueno=?")) {
-            ps.setInt(1, id);
-            ps.setString(2, usuario);
-            return ps.executeUpdate() > 0;
+        try (Connection c = Database.getConnection()) {
+            // Si el usuario era solo un invitado con el que se compartía, quitar el share
+            try (PreparedStatement ps = c.prepareStatement(
+                     "DELETE FROM tareas_compartidas WHERE tarea_id=? AND usuario=?")) {
+                ps.setInt(1, id);
+                ps.setString(2, usuario);
+                if (ps.executeUpdate() > 0) return true;
+            }
+            // Si el usuario es el dueño, eliminar la tarea por completo
+            try (PreparedStatement ps = c.prepareStatement(
+                     "DELETE FROM tareas WHERE id=? AND dueno=?")) {
+                ps.setInt(1, id);
+                ps.setString(2, usuario);
+                return ps.executeUpdate() > 0;
+            }
         } catch (SQLException e) {
             System.err.println("[TareaDao] eliminar: " + e.getMessage());
             return false;
