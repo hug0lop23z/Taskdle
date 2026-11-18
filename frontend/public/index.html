@@ -646,10 +646,7 @@
       font-size: .82rem;
       color: var(--muted);
       line-height: 1.45;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      overflow-wrap: anywhere;
     }
 
     .task-meta {
@@ -1031,11 +1028,12 @@
 
     .cal-grid {
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
+      grid-template-columns: repeat(7, minmax(0, 1fr));
       gap: .4rem;
     }
 
     .cal-cell {
+      min-width: 0;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -1083,10 +1081,10 @@
       font-weight: 600;
       cursor: pointer;
       transition: opacity .2s, transform .15s;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      white-space: normal;
+      overflow-wrap: anywhere;
       max-width: 100%;
+      min-width: 0;
       position: relative;
     }
 
@@ -1124,7 +1122,10 @@
       border-radius: 12px;
       padding: .9rem 1.1rem;
       min-width: 200px;
-      max-width: 270px;
+      width: max-content;
+      max-width: min(270px, calc(100vw - 24px));
+      max-height: calc(100vh - 24px);
+      overflow-y: auto;
       box-shadow: var(--shadow);
       animation: fadeUp .2s ease;
       pointer-events: none;
@@ -1135,6 +1136,7 @@
       font-size: .88rem;
       color: var(--text);
       margin-bottom: .35rem;
+      overflow-wrap: anywhere;
     }
 
     .cal-popover span {
@@ -1142,6 +1144,7 @@
       color: var(--muted);
       display: block;
       line-height: 1.6;
+      overflow-wrap: anywhere;
     }
 
     /* Loading spinner */
@@ -1182,7 +1185,9 @@
       font-size: .88rem;
       box-shadow: var(--shadow);
       animation: fadeUp .3s ease;
-      white-space: nowrap;
+      max-width: calc(100vw - 2rem);
+      white-space: normal;
+      text-align: center;
     }
 
     .toast.success {
@@ -1515,12 +1520,15 @@
       }
 
       .stats-bar {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         padding: .8rem 1rem .3rem;
         gap: .5rem;
+        overflow: visible;
       }
 
       .stat-card {
-        min-width: 92px;
+        min-width: 0;
         padding: .7rem .55rem;
       }
 
@@ -1530,16 +1538,43 @@
       }
 
       .view-toggle-bar {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         padding: .6rem 1rem .2rem;
-        justify-content: flex-start;
+        gap: .45rem;
       }
 
       .view-toggle-bar .view-btn {
-        margin-right: 0 !important;
+        width: 100%;
+        margin: 0 !important;
+        padding: .42rem .2rem;
+        font-size: .72rem;
+        white-space: nowrap;
+      }
+
+      .view-toggle-bar .view-btn:nth-child(1) {
+        grid-column: 1;
+        grid-row: 2;
       }
 
       .view-toggle-bar .view-btn:nth-child(2) {
-        margin-right: auto !important;
+        grid-column: 2;
+        grid-row: 2;
+      }
+
+      .view-toggle-bar .view-btn:nth-child(3) {
+        grid-column: 1;
+        grid-row: 1;
+      }
+
+      .view-toggle-bar .view-btn:nth-child(4) {
+        grid-column: 2;
+        grid-row: 1;
+      }
+
+      .view-toggle-bar .view-btn:nth-child(5) {
+        grid-column: 3;
+        grid-row: 1;
       }
 
       .task-grid {
@@ -1563,6 +1598,33 @@
 
       .modal {
         padding: 1.25rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .modal-overlay {
+        align-items: flex-start;
+        overflow-y: auto;
+      }
+
+      .modal {
+        max-height: calc(100vh - 2rem);
+        margin: 1rem auto;
+        overflow-y: auto;
+      }
+
+      .modal-form .form-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0;
+      }
+
+      .cal-nav {
+        gap: .5rem;
+      }
+
+      .cal-nav h3 {
+        min-width: 0;
+        font-size: 1rem;
       }
     }
   </style>
@@ -2228,7 +2290,7 @@
         let sList = t.subtareas.map((st, i) => `
           <label style="display:flex; align-items:center; gap:.5rem; font-size:.82rem; cursor:pointer;" onclick="event.stopPropagation()">
             <input type="checkbox" ${st.completada ? 'checked' : ''} onchange="toggleSubtarea(${t.id}, ${i}, this.checked)" style="accent-color:var(--primary); width:14px; height:14px;">
-            <span style="${st.completada ? 'text-decoration:line-through;color:var(--muted);' : ''} flex:1; line-height:1.3; overflow:hidden; text-overflow:ellipsis;">${escHtml(st.titulo)}</span>
+            <span style="${st.completada ? 'text-decoration:line-through;color:var(--muted);' : ''} flex:1; min-width:0; line-height:1.3; overflow-wrap:anywhere;">${escHtml(st.titulo)}</span>
           </label>
         `).join('');
 
@@ -2345,7 +2407,7 @@
       const div = document.createElement('div');
       div.style = "display:flex; gap:.4rem;";
       div.innerHTML = `
-        <input type="text" class="subtarea-input" placeholder="Ej: Comprar harina" style="flex:1; padding:.5rem .8rem; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:.85rem; outline:none;">
+        <input type="text" class="subtarea-input" placeholder="Ej: Comprar harina" style="flex:1; min-width:0; padding:.5rem .8rem; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:.85rem; outline:none;">
         <button type="button" class="btn-delete" onclick="this.parentElement.remove()" style="width:32px; height:32px; min-width:32px; border-color:var(--danger); color:var(--danger);">✕</button>
       `;
       list.appendChild(div);
@@ -2645,12 +2707,15 @@
       document.body.appendChild(pop);
       popoverEl = pop;
 
-      // Position near cursor
       const rect = e.target.getBoundingClientRect();
+      const margin = 12;
+      const maxLeft = Math.max(margin, window.innerWidth - pop.offsetWidth - margin);
+      const maxTop = Math.max(margin, window.innerHeight - pop.offsetHeight - margin);
       let left = rect.right + 8;
       let top = rect.top;
-      if (left + 280 > window.innerWidth) left = rect.left - 280;
-      if (top + 160 > window.innerHeight) top = window.innerHeight - 170;
+      if (left + pop.offsetWidth > window.innerWidth - margin) left = rect.left - pop.offsetWidth - 8;
+      left = Math.min(Math.max(left, margin), maxLeft);
+      top = Math.min(Math.max(top, margin), maxTop);
       pop.style.left = left + 'px';
       pop.style.top = top + 'px';
     }
