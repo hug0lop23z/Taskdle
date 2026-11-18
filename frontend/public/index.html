@@ -1621,6 +1621,7 @@
     }
 
     function doLogout() {
+      localStorage.removeItem('taskdle_user');
       currentUser = null;
       allTasks = [];
       exitSelectMode();
@@ -1634,6 +1635,7 @@
 
     // ── Dashboard ─────────────────────────────────────────────────
     function enterDashboard() {
+      if (currentUser) localStorage.setItem('taskdle_user', currentUser);
       document.getElementById('auth-page').style.display = 'none';
       document.getElementById('dashboard-page').style.display = 'flex';
       setTimeout(() => document.getElementById('dashboard-page').classList.add('active'), 10);
@@ -2391,6 +2393,13 @@
       }
       if (e.key === 'Escape' && document.getElementById('modal-overlay').classList.contains('open')) closeModal();
     });
+
+    // ── Restaurar sesión automáticamente al recargar la página ───
+    const savedUser = localStorage.getItem('taskdle_user');
+    if (savedUser) {
+      currentUser = savedUser;
+      enterDashboard();
+    }
   </script>
 </body>
 
