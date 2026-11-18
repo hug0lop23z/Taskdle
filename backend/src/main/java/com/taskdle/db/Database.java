@@ -43,6 +43,11 @@ public class Database {
         }
 
         raw = raw.trim();
+        // Quitar corchetes que se hayan dejado por error alrededor de la contraseña
+        if (raw.contains(":[") && raw.contains("]@")) {
+            raw = raw.replace(":[", ":").replace("]@", "@");
+        }
+
         try {
             String uriStr = raw;
             if (uriStr.startsWith("jdbc:postgresql://")) {
@@ -64,7 +69,11 @@ public class Database {
             if (userInfo != null && userInfo.contains(":")) {
                 String[] parts = userInfo.split(":", 2);
                 connectionProps.setProperty("user", parts[0]);
-                connectionProps.setProperty("password", parts[1]);
+                String pass = parts[1];
+                if (pass.startsWith("[") && pass.endsWith("]")) {
+                    pass = pass.substring(1, pass.length() - 1);
+                }
+                connectionProps.setProperty("password", pass);
             }
 
             connectionProps.setProperty("sslmode", "require");
