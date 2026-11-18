@@ -1621,6 +1621,7 @@
     }
 
     function doLogout() {
+      stopAutoSync();
       localStorage.removeItem('taskdle_user');
       currentUser = null;
       allTasks = [];
@@ -1646,6 +1647,7 @@
       calMonth = now.getMonth(); // 0-based
       loadTareas();
       loadRacha();
+      startAutoSync();
     }
 
     async function loadRacha() {
@@ -1697,6 +1699,72 @@
         toast('Error al cargar las tareas', 'error');
       }
     }
+
+    // ── Auto-Sincronización en Tiempo Real (Tareas Compartidas) ──
+    let autoSyncTimer = null;
+    let isSyncing = false;
+
+    function startAutoSync() {
+      stopAutoSync();
+      autoSyncTimer = setInterval(syncBackground, 3500);
+    }
+
+    function stopAutoSync() {
+      if (autoSyncTimer) {
+        clearInterval(autoSyncTimer);
+        autoSyncTimer = null;
+      }
+    }
+
+    async function syncBackground() {
+      if (!currentUser || isSyncing || !navigator.onLine) return;
+      if (document.hidden) return; // no gastar peticiones si la pestaña está oculta
+
+      isSyncing = true;
+      try {
+        const res = await apiFetch(API_BASE + `/api/tareas?usuario=${encodeURIComponent(currentUser)}`);
+        if (!res.ok) { isSyncing = false; return; }
+        const newTasks = await res.json();
+
+        // Comparar con las tareas actuales
+        const oldJson = JSON.stringify(allTasks);
+        const newJson = JSON.stringify(newTasks);
+
+        if (oldJson !== newJson) {
+          // Detectar si han entrado tareas nuevas (por ejemplo compartidas por otro usuario)
+          const oldIds = new Set(allTasks.map(t => t.id));
+          const recienLlegadas = newTasks.filter(t => !oldIds.has(t.id));
+
+          if (recienLlegadas.length > 0 && allTasks.length > 0) {
+            const t = recienLlegadas[0];
+            toast(`🔔 Nueva tarea recibida: "${t.titulo}"`, 'info');
+          }
+
+          allTasks = newTasks;
+          saveCache();
+
+          const validIds = new Set(allTasks.map(t => t.id));
+          for (const id of selectedTaskIds) {
+             if (!validIds.has(id)) selectedTaskIds.delete(id);
+          }
+          updateBulkBar();
+          renderStats();
+          renderTareas();
+          if (activeView === 'calendar') renderCalendar();
+        }
+      } catch (ignored) {
+      } finally {
+        isSyncing = false;
+      }
+    }
+
+    // Al volver a la pestaña o darle foco, sincronizar al instante
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && currentUser) syncBackground();
+    });
+    window.addEventListener('focus', () => {
+      if (currentUser) syncBackground();
+    });
 
     // ── View Toggle ───────────────────────────────────────────────
     function showView(v) {
