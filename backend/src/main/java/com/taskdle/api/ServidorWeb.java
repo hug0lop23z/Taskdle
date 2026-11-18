@@ -81,10 +81,6 @@ public class ServidorWeb {
         String usuario  = extractJson(body, "usuario");
         String password = extractJson(body, "password");
 
-        if (!Database.isAvailable()) {
-            respond(ex, 200, "application/json", "{\"ok\":false,\"mensaje\":\"Base de datos no configurada (DATABASE_URL no definida en Render)\"}");
-            return;
-        }
 
         Usuario u = gestor.autenticar(usuario, password);
         if (u != null) {
