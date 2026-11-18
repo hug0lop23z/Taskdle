@@ -302,15 +302,17 @@ public class ServidorWeb {
     }
 
     static void corsHeaders(HttpExchange ex) {
-        ex.getResponseHeaders().add("Access-Control-Allow-Origin",  "*");
-        ex.getResponseHeaders().add("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-        ex.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type");
+        Headers h = ex.getResponseHeaders();
+        h.set("Access-Control-Allow-Origin",  "*");
+        h.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        h.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
     }
 
     static boolean preflight(HttpExchange ex) throws IOException {
-        if ("OPTIONS".equals(ex.getRequestMethod())) {
+        if ("OPTIONS".equalsIgnoreCase(ex.getRequestMethod())) {
             corsHeaders(ex);
             ex.sendResponseHeaders(204, -1);
+            ex.close();
             return true;
         }
         return false;

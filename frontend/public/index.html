@@ -1470,7 +1470,7 @@
     // ── Configuración de API ──────────────────────────────────────────────────
     const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
                      ? 'http://localhost:8080'
-                     : (localStorage.getItem('api_url') || 'https://taskdle.onrender.com');
+                     : (window.location.hostname.endsWith('vercel.app') ? '' : (localStorage.getItem('api_url') || 'https://taskdle.onrender.com'));
 
     // ── Service Worker & Offline Sync ───────────────────────────
     if ('serviceWorker' in navigator) {
