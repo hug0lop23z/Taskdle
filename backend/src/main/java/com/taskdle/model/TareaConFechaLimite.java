@@ -1,36 +1,36 @@
 package com.taskdle.model;
 
-import java.time.LocalDate;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
 public class TareaConFechaLimite extends Tarea {
 
-    private LocalDate fechaLimite;
+    private Instant fechaLimite;
 
     public TareaConFechaLimite(String titulo, String descripcion,
-                                Prioridad prioridad, LocalDate fechaLimite) {
+                                Prioridad prioridad, Instant fechaLimite) {
         super(titulo, descripcion, prioridad);
         this.fechaLimite = fechaLimite;
     }
 
     public TareaConFechaLimite(int id, String titulo, String descripcion,
                                 Prioridad prioridad, Estado estado,
-                                LocalDateTime fechaCreacion, LocalDate fechaLimite) {
+                                LocalDateTime fechaCreacion, Instant fechaLimite) {
         super(id, titulo, descripcion, prioridad, estado, fechaCreacion);
         this.fechaLimite = fechaLimite;
     }
 
     public boolean estaVencida() {
-        return !estaCompletada() && LocalDate.now().isAfter(fechaLimite);
+        return !estaCompletada() && Instant.now().isAfter(fechaLimite);
     }
 
     public long getDiasRestantes() {
-        return ChronoUnit.DAYS.between(LocalDate.now(), fechaLimite);
+        return ChronoUnit.DAYS.between(Instant.now(), fechaLimite);
     }
 
-    @Override public LocalDate getFechaLimite() { return fechaLimite; }
-    public void setFechaLimite(LocalDate f)     { this.fechaLimite = f; }
+    @Override public Instant getFechaLimite() { return fechaLimite; }
+    public void setFechaLimite(Instant f)     { this.fechaLimite = f; }
 
     @Override public String getTipoTarea() { return "FECHA"; }
 

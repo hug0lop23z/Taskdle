@@ -10,7 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
-import java.time.LocalDate;
+import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.*;
@@ -180,7 +180,7 @@ public class ServidorWeb {
             Tarea tarea;
             if ("FECHA".equals(tipo)) {
                 String fechaStr = extractJson(body, "fechaLimite");
-                LocalDate fecha = LocalDate.parse(fechaStr);
+                Instant fecha = Instant.parse(fechaStr);
                 tarea = new TareaConFechaLimite(titulo, descripcion == null ? "" : descripcion, prio, fecha);
             } else {
                 tarea = new TareaSimple(titulo, descripcion == null ? "" : descripcion, prio);

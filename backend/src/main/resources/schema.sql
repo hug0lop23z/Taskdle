@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS tareas (
     prioridad VARCHAR(10) NOT NULL DEFAULT 'MEDIA',
     estado VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE',
     fecha_creacion TIMESTAMP NOT NULL DEFAULT NOW(),
-    fecha_limite DATE
+    fecha_limite TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS subtareas (

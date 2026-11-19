@@ -1,6 +1,6 @@
 package com.taskdle.model;
 
-import java.time.LocalDate;
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 public class TareaSimple extends Tarea {
@@ -16,5 +16,5 @@ public class TareaSimple extends Tarea {
 
     @Override public String getTipoTarea()    { return "SIMPLE"; }
     @Override public String getInfoAdicional(){ return "Tarea simple sin fecha límite"; }
-    @Override public LocalDate getFechaLimite(){ return null; }
+    @Override public Instant getFechaLimite(){ return null; }
 }

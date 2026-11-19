@@ -1,6 +1,6 @@
 package com.taskdle.model;
 
-import java.time.LocalDate;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +38,7 @@ public abstract class Tarea {
 
     public abstract String getTipoTarea();
     public abstract String getInfoAdicional();
-    public abstract LocalDate getFechaLimite();
+    public abstract Instant getFechaLimite();
 
     public boolean estaCompletada() { return estado == Estado.COMPLETADA; }
     public void completar()         { this.estado = Estado.COMPLETADA; }

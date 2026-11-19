@@ -2,7 +2,7 @@ package com.taskdle.db;
 
 import com.taskdle.model.*;
 import java.sql.*;
-import java.time.LocalDate;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -70,9 +70,9 @@ public class TareaDao {
             ps.setString(5, t.getPrioridad().name());
             ps.setString(6, t.getEstado().name());
             ps.setTimestamp(7, Timestamp.valueOf(t.getFechaCreacion()));
-            LocalDate fl = t.getFechaLimite();
-            if (fl != null) ps.setDate(8, Date.valueOf(fl));
-            else ps.setNull(8, Types.DATE);
+            Instant fl = t.getFechaLimite();
+            if (fl != null) ps.setTimestamp(8, Timestamp.from(fl));
+            else ps.setNull(8, Types.TIMESTAMP_WITH_TIMEZONE);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 int newId = rs.getInt(1);
@@ -193,10 +193,10 @@ public class TareaDao {
         Prioridad p   = Prioridad.fromString(rs.getString("prioridad"));
         Estado e      = Estado.fromString(rs.getString("estado"));
         LocalDateTime fc = rs.getTimestamp("fecha_creacion").toLocalDateTime();
-        Date fl = rs.getDate("fecha_limite");
+        Timestamp fl = rs.getTimestamp("fecha_limite");
 
         if ("FECHA".equals(tipo) && fl != null) {
-            return new TareaConFechaLimite(id, titulo, desc, p, e, fc, fl.toLocalDate());
+            return new TareaConFechaLimite(id, titulo, desc, p, e, fc, fl.toInstant());
         } else {
             return new TareaSimple(id, titulo, desc, p, e, fc);
         }
