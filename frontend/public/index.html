@@ -1087,6 +1087,13 @@
       flex-direction: column;
       gap: .3rem;
       transition: border-color .2s;
+      cursor: pointer;
+    }
+
+    .cal-cell:hover,
+    .cal-cell:focus-visible {
+      border-color: var(--primary);
+      outline: none;
     }
 
     .cal-grid-week .cal-cell {
@@ -2819,6 +2826,13 @@
       document.getElementById('err-modal').classList.remove('visible');
     }
 
+    function openModalForDate(date) {
+      document.getElementById('m-tipo').value = 'FECHA';
+      document.getElementById('m-fecha').value = date;
+      toggleFecha();
+      openModal();
+    }
+
     function closeModal() {
       document.getElementById('modal-overlay').classList.remove('open');
       document.getElementById('m-titulo').value = '';
@@ -2995,34 +3009,7 @@
           month = calMonth; year = calYear;
         }
 
-        const dateStr = isoDate(year, month, day);
-        const tasks = taskMap[dateStr] || [];
-        const isToday = dateStr === todayStr;
-
-        const cell = document.createElement('div');
-        cell.className = 'cal-cell'
-          + (otherMonth ? ' other-month' : '')
-          + (isToday ? ' today' : '')
-          + (tasks.length ? ' has-tasks' : '');
-
-        const numEl = document.createElement('div');
-        numEl.className = 'cal-day-num';
-        numEl.textContent = day;
-        cell.appendChild(numEl);
-
-        tasks.forEach(t => {
-          const pill = document.createElement('div');
-          const prio = t.prioridad.toLowerCase();
-          const done = t.estado === 'COMPLETADA';
-          pill.className = `cal-pill ${prio}${done ? ' completada' : ''}`;
-          pill.textContent = t.titulo;
-          pill.title = t.titulo;
-          pill.addEventListener('mouseenter', e => showPopover(e, t));
-          pill.addEventListener('mouseleave', dismissPopover);
-          cell.appendChild(pill);
-        });
-
-        grid.appendChild(cell);
+        appendCalendarDay(grid, new Date(year, month, day), taskMap, todayStr, otherMonth);
       }
     }
 
@@ -3034,6 +3021,18 @@
         + (otherMonth ? ' other-month' : '')
         + (dateStr === todayStr ? ' today' : '')
         + (tasks.length ? ' has-tasks' : '');
+      cell.setAttribute('role', 'button');
+      cell.tabIndex = 0;
+      cell.setAttribute('aria-label', `Crear tarea para el ${date.toLocaleDateString('es-ES', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+      })}`);
+      cell.addEventListener('click', () => openModalForDate(dateStr));
+      cell.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openModalForDate(dateStr);
+        }
+      });
 
       const numEl = document.createElement('div');
       numEl.className = 'cal-day-num';
