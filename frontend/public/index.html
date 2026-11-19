@@ -2587,7 +2587,7 @@
         
         let sList = t.subtareas.map((st, i) => `
           <label style="display:flex; align-items:center; gap:.5rem; font-size:.82rem; cursor:pointer;" onclick="event.stopPropagation()">
-            <input type="checkbox" ${st.completada ? 'checked' : ''} onchange="toggleSubtarea(${t.id}, ${i}, this.checked)" style="accent-color:var(--primary); width:14px; height:14px;">
+            <input type="checkbox" ${st.completada ? 'checked' : ''} onchange="toggleSubtarea(${t.id}, ${st.id}, this.checked)" style="accent-color:var(--primary); width:14px; height:14px;">
             <span style="${st.completada ? 'text-decoration:line-through;color:var(--muted);' : ''} flex:1; min-width:0; line-height:1.3; overflow-wrap:anywhere;">${escHtml(st.titulo)}</span>
           </label>
         `).join('');
@@ -2727,12 +2727,12 @@
       div.querySelector('input').focus();
     }
 
-    async function toggleSubtarea(id, indice, completada) {
+    async function toggleSubtarea(id, subtareaId, completada) {
       try {
         const res = await apiFetch(API_BASE + `/api/tareas/${id}/subtarea`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ usuario: currentUser, indice: indice.toString(), completada: completada.toString() })
+          body: JSON.stringify({ usuario: currentUser, subtareaId, completada })
         });
         const data = await res.json();
         if (data.ok) {
