@@ -360,13 +360,112 @@
     }
 
     .user-badge {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: .6rem;
       background: var(--glass);
       border: 1px solid var(--border);
       border-radius: 99px;
       padding: .45rem .9rem;
+      color: var(--text);
+      font: inherit;
+      cursor: pointer;
+      transition: border-color .2s, background-color .2s;
+    }
+
+    .user-badge:hover,
+    .user-menu.open .user-badge {
+      border-color: var(--primary);
+      background: var(--surface2);
+    }
+
+    .user-badge:focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+
+    .user-menu {
+      position: relative;
+    }
+
+    .user-menu-chevron {
+      width: 14px;
+      height: 14px;
+      color: var(--muted);
+      transition: transform .18s ease;
+    }
+
+    .user-menu.open .user-menu-chevron {
+      transform: rotate(180deg);
+    }
+
+    .user-menu-dropdown {
+      position: absolute;
+      top: calc(100% + .55rem);
+      right: 0;
+      z-index: 120;
+      display: none;
+      width: min(250px, calc(100vw - 2rem));
+      padding: .55rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .user-menu.open .user-menu-dropdown {
+      display: flex;
+      flex-direction: column;
+      gap: .25rem;
+    }
+
+    .user-menu-heading {
+      padding: .55rem .65rem .7rem;
+      border-bottom: 1px solid var(--border);
+      font-size: .82rem;
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+
+    .user-menu-item {
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+      width: 100%;
+      min-height: 42px;
+      padding: .55rem .65rem;
+      border: 0;
+      border-radius: 9px;
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      font-size: .84rem;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .user-menu-item:hover {
+      background: var(--surface2);
+    }
+
+    .user-menu-item .icon {
+      width: 17px;
+      height: 17px;
+      color: var(--muted);
+    }
+
+    .user-menu-item.logout {
+      color: var(--danger);
+    }
+
+    .user-menu-item.logout .icon {
+      color: var(--danger);
+    }
+
+    @media (max-width: 480px) {
+      .user-badge .name {
+        display: none;
+      }
     }
 
     .user-badge .avatar {
@@ -1680,16 +1779,16 @@
       }
 
       header > div:last-child {
-        gap: .35rem !important;
+        gap: .35rem;
       }
 
       .user-badge {
-        padding: .35rem;
+        padding: .35rem .5rem;
+        gap: .35rem;
       }
 
-      .user-badge .name,
-      .streak-badge {
-        display: none !important;
+      .user-menu-dropdown {
+        right: 0;
       }
 
       .btn-logout {
@@ -1977,15 +2076,21 @@
         <h2>Taskdle</h2>
       </div>
       <div style="display:flex;align-items:center;gap:.5rem">
-        <div class="streak-badge" id="streak-badge" style="display:none" title="Racha de tareas">
-          <svg class="icon" aria-hidden="true"><use href="#icon-activity"></use></svg><span id="streak-count">0</span>
+        <div class="user-menu" id="user-menu">
+          <button class="user-badge" id="user-menu-trigger" type="button" aria-expanded="false" aria-controls="user-menu-dropdown" onclick="toggleUserMenu()">
+            <span class="avatar" id="user-avatar">U</span>
+            <span class="name" id="user-name-label">Usuario</span>
+            <svg class="icon user-menu-chevron" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+          </button>
+          <div class="user-menu-dropdown" id="user-menu-dropdown">
+            <div class="user-menu-heading" id="user-menu-heading">Usuario</div>
+            <div class="streak-badge" id="streak-badge" style="display:none" title="Racha de tareas">
+              <svg class="icon" aria-hidden="true"><use href="#icon-activity"></use></svg><span id="streak-count">0</span>
+            </div>
+            <button class="user-menu-item" id="btn-theme" type="button" onclick="toggleTheme()"><svg class="icon" aria-hidden="true"><use href="#icon-moon"></use></svg><span>Tema</span></button>
+            <button class="user-menu-item logout" type="button" onclick="doLogout()"><svg class="icon" aria-hidden="true"><use href="#icon-logout"></use></svg><span>Cerrar sesión</span></button>
+          </div>
         </div>
-        <div class="user-badge">
-          <div class="avatar" id="user-avatar">U</div>
-          <span class="name" id="user-name-label">Usuario</span>
-        </div>
-        <button class="btn-logout" id="btn-theme" onclick="toggleTheme()" title="Cambiar tema" aria-label="Cambiar tema"><svg class="icon" aria-hidden="true"><use href="#icon-moon"></use></svg></button>
-        <button class="btn-logout" onclick="doLogout()"><svg class="icon" aria-hidden="true"><use href="#icon-logout"></use></svg>Salir</button>
       </div>
     </header>
 
@@ -2165,9 +2270,17 @@
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
       const name = isDark ? 'sun' : 'moon';
       document.querySelectorAll('#btn-theme-auth, #btn-theme').forEach(button => {
-        button.innerHTML = icon(name);
+        const use = button.querySelector('use');
+        if (use) use.setAttribute('href', `#icon-${name}`);
       });
       document.querySelector('meta[name="theme-color"]').content = isDark ? '#202a27' : '#f4f6f3';
+    }
+
+    function toggleUserMenu(forceClose = false) {
+      const menu = document.getElementById('user-menu');
+      const isOpen = !forceClose && !menu.classList.contains('open');
+      menu.classList.toggle('open', isOpen);
+      document.getElementById('user-menu-trigger').setAttribute('aria-expanded', isOpen);
     }
 
     let lastCompactMode = null;
@@ -2276,6 +2389,10 @@
     updateThemeIcons();
     syncResponsiveDisclosures();
     window.addEventListener('resize', syncResponsiveDisclosures);
+    document.addEventListener('click', event => {
+      const menu = document.getElementById('user-menu');
+      if (menu.classList.contains('open') && !menu.contains(event.target)) toggleUserMenu(true);
+    });
     document.addEventListener('toggle', event => {
       const details = event.target;
       if (details.matches('.task-details') && window.matchMedia('(max-width: 640px)').matches) {
@@ -2357,6 +2474,7 @@
     }
 
     function doLogout() {
+      toggleUserMenu(true);
       stopAutoSync();
       localStorage.removeItem('taskdle_user');
       currentUser = null;
@@ -2377,6 +2495,7 @@
       document.getElementById('dashboard-page').style.display = 'flex';
       setTimeout(() => document.getElementById('dashboard-page').classList.add('active'), 10);
       document.getElementById('user-name-label').textContent = currentUser;
+      document.getElementById('user-menu-heading').textContent = currentUser;
       document.getElementById('user-avatar').textContent = currentUser[0].toUpperCase();
       const now = new Date();
       calendarDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -3443,6 +3562,10 @@
 
     // ── Keyboard shortcuts ────────────────────────────────────────
     document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && document.getElementById('user-menu').classList.contains('open')) {
+        toggleUserMenu(true);
+        document.getElementById('user-menu-trigger').focus();
+      }
       if (e.key === 'Enter') {
         if (document.getElementById('panel-login').style.display !== 'none'
           && document.getElementById('auth-page').style.display !== 'none') doLogin();
