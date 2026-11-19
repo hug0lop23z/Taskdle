@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="230" viewBox="0 0 1200 230" role="img" aria-labelledby="title description">
+  <title id="title">Flujo de trabajo en Taskdle</title>
+  <desc id="description">Cuatro pasos para capturar, organizar, planificar y completar tareas.</desc>
+  <g font-family="Inter, Segoe UI, Arial, sans-serif">
+    <g>
+      <rect x="28" y="32" width="258" height="164" rx="18" fill="#eef4f0" stroke="#dce8e0"/>
+      <circle cx="70" cy="76" r="22" fill="#52796f"/>
+      <path d="M70 64v24m-12-12h24" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+      <text x="58" y="125" fill="#26332e" font-size="18" font-weight="700">Captura</text>
+      <text x="58" y="151" fill="#66776e" font-size="13">Anota la tarea y su objetivo.</text>
+    </g>
+    <path d="M294 114h28m-8-8 8 8-8 8" fill="none" stroke="#9aaca1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <g>
+      <rect x="332" y="32" width="258" height="164" rx="18" fill="#eef3f3" stroke="#dce7e7"/>
+      <circle cx="374" cy="76" r="22" fill="#5f8490"/>
+      <path d="M364 69h20m-20 7h15m-15 7h18" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+      <text x="362" y="125" fill="#26332e" font-size="18" font-weight="700">Organiza</text>
+      <text x="362" y="151" fill="#66776e" font-size="13">Define prioridad y subtareas.</text>
+    </g>
+    <path d="M598 114h28m-8-8 8 8-8 8" fill="none" stroke="#9aaca1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <g>
+      <rect x="636" y="32" width="258" height="164" rx="18" fill="#f5f1e9" stroke="#ebe3d5"/>
+      <circle cx="678" cy="76" r="22" fill="#a77a3b"/>
+      <rect x="667" y="66" width="22" height="20" rx="3" fill="none" stroke="#ffffff" stroke-width="2"/>
+      <path d="M667 72h22m-16-9v6m10-6v6" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+      <text x="666" y="125" fill="#26332e" font-size="18" font-weight="700">Planifica</text>
+      <text x="666" y="151" fill="#66776e" font-size="13">Reserva fecha y hora límite.</text>
+    </g>
+    <path d="M902 114h28m-8-8 8 8-8 8" fill="none" stroke="#9aaca1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <g>
+      <rect x="940" y="32" width="258" height="164" rx="18" fill="#eef4ef" stroke="#dce8de"/>
+      <circle cx="982" cy="76" r="22" fill="#54806c"/>
+      <path d="M972 76l7 7 14-15" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="970" y="125" fill="#26332e" font-size="18" font-weight="700">Avanza</text>
+      <text x="970" y="151" fill="#66776e" font-size="13">Sigue el progreso y completa.</text>
+    </g>
+  </g>
+</svg>

@@ -5,9 +5,21 @@
   Una aplicación web para organizar tareas personales y compartidas, planificar fechas límite y seguir el progreso desde cualquier dispositivo.
 </p>
 
-Taskdle reúne en un mismo lugar lo que tienes pendiente, lo que ya está en marcha y lo que has terminado. Está pensada para convertir una lista de obligaciones en un plan manejable: divide el trabajo en pasos, decide qué requiere atención primero y reserva tiempo para las tareas con fecha límite.
+<p align="center">
+  <img src="docs/images/readme-cover.svg" alt="Taskdle: organiza tareas con calma, prioriza y planifica desde un panel claro" width="1200">
+</p>
 
-La interfaz está en español y se adapta a escritorio, tablet y móvil. Las imágenes de este documento muestran datos ficticios de demostración.
+Taskdle reúne lo que tienes pendiente, lo que está en marcha y lo que has terminado. Está pensada para convertir una lista de obligaciones en un plan manejable: divide el trabajo en pasos, decide qué requiere atención primero y reserva tiempo para las tareas con fecha límite.
+
+La interfaz está en español y se adapta a escritorio, tablet y móvil. Las capturas muestran datos ficticios de demostración.
+
+## De la idea a la tarea completada
+
+El flujo de Taskdle ayuda a pasar de una nota rápida a un plan que puedes seguir:
+
+<p align="center">
+  <img src="docs/images/readme-flow.svg" alt="Flujo de Taskdle: captura, organiza, planifica y avanza" width="1200">
+</p>
 
 ## Qué puedes hacer con Taskdle
 
@@ -47,13 +59,24 @@ El Service Worker permite cargar la aplicación y consultar tareas guardadas cua
 
 Taskdle separa la interfaz, las operaciones de negocio y el almacenamiento:
 
-```text
-Navegador / PWA
-  ├─ Interfaz estática: HTML, CSS y JavaScript
-  ├─ Caché local y cola de cambios sin conexión
-  └─ API REST
-       └─ Backend Java 17
-            └─ PostgreSQL (por ejemplo, Supabase)
+```mermaid
+flowchart LR
+  Browser["Navegador / PWA"] --> API["API REST"]
+  API --> Java["Backend Java 17"]
+  Java --> DB["PostgreSQL / Supabase"]
+  Browser -. "caché y cola sin conexión" .-> Local["Almacenamiento local"]
+
+  classDef client fill:#e7eeea,stroke:#52796f,color:#26332e,stroke-width:2px
+  classDef api fill:#eef3f3,stroke:#5f8490,color:#26332e,stroke-width:2px
+  classDef backend fill:#f5f1e9,stroke:#a77a3b,color:#26332e,stroke-width:2px
+  classDef database fill:#eef4ef,stroke:#54806c,color:#26332e,stroke-width:2px
+  classDef local fill:#f1f4f1,stroke:#73817a,color:#26332e,stroke-width:2px
+
+  class Browser client
+  class API api
+  class Java backend
+  class DB database
+  class Local local
 ```
 
 1. **La interfaz** se sirve como contenido estático. No necesita un proceso de compilación del frontend.

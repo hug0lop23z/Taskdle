@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="380" viewBox="0 0 1200 380" role="img" aria-labelledby="title description">
+  <title id="title">Taskdle, organiza tareas con más calma</title>
+  <desc id="description">Ilustración de Taskdle en tonos verdes suaves, junto a una vista de tareas con prioridades y fechas.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8faf8"/>
+      <stop offset="1" stop-color="#e7eeea"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#26332e" flood-opacity=".12"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="380" rx="28" fill="url(#background)"/>
+  <circle cx="1095" cy="28" r="152" fill="#dbe7e0"/>
+  <circle cx="1125" cy="350" r="120" fill="#e1e9e4"/>
+
+  <g font-family="Inter, Segoe UI, Arial, sans-serif">
+    <rect x="70" y="58" width="48" height="48" rx="15" fill="#52796f"/>
+    <rect x="81" y="82" width="7" height="14" rx="3.5" fill="#ffffff" fill-opacity=".58"/>
+    <rect x="92" y="74" width="7" height="22" rx="3.5" fill="#ffffff" fill-opacity=".8"/>
+    <rect x="103" y="65" width="7" height="31" rx="3.5" fill="#ffffff"/>
+    <circle cx="106" cy="62" r="4" fill="#ffffff"/>
+    <path d="M104 62l1.5 1.5 3-3.5" fill="none" stroke="#52796f" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <text x="132" y="90" fill="#26332e" font-size="25" font-weight="700">TASKDLE</text>
+    <rect x="70" y="139" width="192" height="30" rx="15" fill="#e2ece6"/>
+    <text x="86" y="159" fill="#52796f" font-size="12" font-weight="700" letter-spacing="1.2">ORGANIZA CON CALMA</text>
+    <text x="70" y="222" fill="#26332e" font-size="43" font-weight="700">Cada tarea,</text>
+    <text x="70" y="272" fill="#52796f" font-size="43" font-weight="700">en su momento.</text>
+    <text x="72" y="311" fill="#73817a" font-size="17">Prioriza, planifica y avanza paso a paso.</text>
+    <circle cx="80" cy="348" r="5" fill="#52796f"/>
+    <text x="95" y="353" fill="#52645b" font-size="13" font-weight="600">LISTA</text>
+    <circle cx="166" cy="348" r="5" fill="#5f8490"/>
+    <text x="181" y="353" fill="#52645b" font-size="13" font-weight="600">CALENDARIO</text>
+    <circle cx="290" cy="348" r="5" fill="#a77a3b"/>
+    <text x="305" y="353" fill="#52645b" font-size="13" font-weight="600">SUBTAREAS</text>
+
+    <g filter="url(#shadow)">
+      <rect x="555" y="42" width="575" height="296" rx="22" fill="#ffffff"/>
+    </g>
+    <rect x="580" y="64" width="38" height="38" rx="12" fill="#52796f"/>
+    <path d="M591 84h4v8h-4zm8-5h4v13h-4zm8-7h4v20h-4z" fill="#ffffff"/>
+    <text x="632" y="82" fill="#26332e" font-size="15" font-weight="700">Mi espacio</text>
+    <text x="632" y="98" fill="#73817a" font-size="11">Un plan claro para hoy</text>
+    <rect x="1023" y="70" width="82" height="27" rx="13.5" fill="#f1f4f1"/>
+    <text x="1041" y="88" fill="#52796f" font-size="11" font-weight="600">3 tareas</text>
+
+    <rect x="580" y="120" width="525" height="56" rx="13" fill="#f8faf8" stroke="#e6ebe7"/>
+    <circle cx="603" cy="148" r="9" fill="#f4e9e6"/>
+    <circle cx="603" cy="148" r="4" fill="#b76b67"/>
+    <text x="623" y="145" fill="#26332e" font-size="13" font-weight="600">Preparar entrega</text>
+    <text x="623" y="162" fill="#73817a" font-size="11">Pendiente · vence mañana, 16:30</text>
+    <rect x="1030" y="136" width="58" height="24" rx="12" fill="#f6ecea"/>
+    <text x="1043" y="152" fill="#a85f5b" font-size="10" font-weight="700">ALTA</text>
+
+    <rect x="580" y="189" width="525" height="56" rx="13" fill="#f8faf8" stroke="#e6ebe7"/>
+    <circle cx="603" cy="217" r="9" fill="#e4edeb"/>
+    <circle cx="603" cy="217" r="4" fill="#5f8490"/>
+    <text x="623" y="214" fill="#26332e" font-size="13" font-weight="600">Planificar la semana</text>
+    <text x="623" y="231" fill="#73817a" font-size="11">En progreso · 2 subtareas</text>
+    <rect x="1021" y="205" width="67" height="24" rx="12" fill="#f4eee5"/>
+    <text x="1035" y="221" fill="#98703b" font-size="10" font-weight="700">MEDIA</text>
+
+    <rect x="580" y="258" width="525" height="56" rx="13" fill="#f8faf8" stroke="#e6ebe7"/>
+    <circle cx="603" cy="286" r="9" fill="#e7efe9"/>
+    <path d="M599 286l3 3 6-7" fill="none" stroke="#54806c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="623" y="283" fill="#26332e" font-size="13" font-weight="600">Revisar notas</text>
+    <text x="623" y="300" fill="#73817a" font-size="11">Completada · progreso registrado</text>
+    <rect x="1031" y="274" width="57" height="24" rx="12" fill="#e8f0ea"/>
+    <text x="1044" y="290" fill="#54806c" font-size="10" font-weight="700">LISTA</text>
+  </g>
+</svg>
