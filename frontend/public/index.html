@@ -2009,6 +2009,7 @@
     <symbol id="icon-calendar-date" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18m4 4h.01"/></symbol>
     <symbol id="icon-rotate" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.4-3"/></symbol>
     <symbol id="icon-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.7 6.6-4.4m-6.6 7 6.6 4"/></symbol>
+    <symbol id="icon-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
     <symbol id="icon-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-8 13h4"/></symbol>
     <symbol id="icon-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
     <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
@@ -2068,6 +2069,53 @@
     </div>
   </div>
 
+  <!-- ── Modal Grupos ────────────────────────────────────────── -->
+  <div class="modal-overlay" id="groups-modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Grupos y amigos</h3>
+        <button class="btn-close" onclick="closeGroupsModal()" aria-label="Cerrar"><svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg></button>
+      </div>
+      <div class="modal-form">
+        <div class="form-group">
+          <label for="group-name">Crear grupo</label>
+          <div class="form-row" style="grid-template-columns:minmax(0,1fr) auto">
+            <input type="text" id="group-name" placeholder="Familia, Trabajo...">
+            <button class="btn-primary-modal" type="button" onclick="crearGrupo()" style="padding:.72rem 1rem">Crear</button>
+          </div>
+        </div>
+        <div id="groups-list" style="display:flex;flex-direction:column;gap:.7rem;margin-top:1rem"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal Compartir Tarea ───────────────────────────────── -->
+  <div class="modal-overlay" id="share-modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Compartir tarea</h3>
+        <button class="btn-close" onclick="closeShareModal()" aria-label="Cerrar"><svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg></button>
+      </div>
+      <div class="modal-form">
+        <div class="form-group">
+          <label for="share-user">Usuario individual</label>
+          <div class="form-row" style="grid-template-columns:minmax(0,1fr) auto">
+            <input type="text" id="share-user" placeholder="Nombre de usuario">
+            <button class="btn-primary-modal" type="button" onclick="compartirTareaUsuario()" style="padding:.72rem 1rem">Enviar</button>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:1rem">
+          <label for="share-group">Compartir con un grupo</label>
+          <select id="share-group"></select>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-secondary" onclick="closeShareModal()">Cancelar</button>
+          <button class="btn-primary-modal" id="share-group-btn" onclick="compartirTareaGrupo()">Compartir con grupo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Dashboard ─────────────────────────────────────────────── -->
   <div id="dashboard-page">
     <header>
@@ -2088,6 +2136,7 @@
               <svg class="icon" aria-hidden="true"><use href="#icon-activity"></use></svg><span id="streak-count">0</span>
             </div>
             <button class="user-menu-item" id="btn-theme" type="button" onclick="toggleTheme()"><svg class="icon" aria-hidden="true"><use href="#icon-moon"></use></svg><span>Tema</span></button>
+            <button class="user-menu-item" type="button" onclick="toggleUserMenu(true); openGroupsModal()"><svg class="icon" aria-hidden="true"><use href="#icon-users"></use></svg><span>Grupos y amigos</span></button>
             <button class="user-menu-item logout" type="button" onclick="doLogout()"><svg class="icon" aria-hidden="true"><use href="#icon-logout"></use></svg><span>Cerrar sesión</span></button>
           </div>
         </div>
@@ -2364,6 +2413,8 @@
     let popoverEl = null; // active popover element
     let selectedTaskIds = new Set();
     let isSelectMode = false;
+    let groups = [];
+    let taskBeingShared = null;
     const expandedTaskDetails = new Set();
     const renderedTaskSignatures = new Map();
 
@@ -2501,6 +2552,7 @@
       calendarDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       loadTareas();
       loadRacha();
+      loadGroups();
       startAutoSync();
     }
 
@@ -2885,10 +2937,23 @@
     }
 
     async function compartirTarea(id) {
-      const user = prompt("Introduce el nombre del usuario con el que quieres compartir la tarea:");
-      if (!user || user.trim() === '') return;
+      taskBeingShared = id;
+      document.getElementById('share-user').value = '';
+      document.getElementById('share-modal-overlay').classList.add('open');
+      await loadGroups();
+      document.getElementById('share-modal-overlay').querySelector('input').focus();
+    }
+
+    function closeShareModal() {
+      document.getElementById('share-modal-overlay').classList.remove('open');
+      taskBeingShared = null;
+    }
+
+    async function compartirTareaUsuario() {
+      const user = document.getElementById('share-user').value.trim();
+      if (!taskBeingShared || !user) return;
       try {
-        const res = await apiFetch(API_BASE + `/api/tareas/${id}/compartir`, {
+        const res = await apiFetch(API_BASE + `/api/tareas/${taskBeingShared}/compartir`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ usuario: currentUser, compartirCon: user.trim() })
@@ -2896,11 +2961,169 @@
         const data = await res.json();
         if (data.ok) {
           toast(`Tarea compartida con ${user}`, 'success');
+          closeShareModal();
         } else {
           toast(data.mensaje || 'Error al compartir. Verifica el usuario.', 'error');
         }
       } catch (e) {
         toast('Error de conexión', 'error');
+      }
+    }
+
+    async function compartirTareaGrupo() {
+      if (!taskBeingShared) return;
+      const select = document.getElementById('share-group');
+      const groupId = Number(select.value);
+      if (!groupId) {
+        toast('Selecciona un grupo', 'error');
+        return;
+      }
+      try {
+        const res = await apiFetch(API_BASE + `/api/grupos/${groupId}/tareas/${taskBeingShared}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: currentUser })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          toast('Tarea compartida con el grupo', 'success');
+          closeShareModal();
+        } else {
+          toast(data.mensaje || 'No se pudo compartir con el grupo', 'error');
+        }
+      } catch (e) {
+        toast('Error de conexión', 'error');
+      }
+    }
+
+    function openGroupsModal() {
+      document.getElementById('groups-modal-overlay').classList.add('open');
+      document.getElementById('group-name').value = '';
+      loadGroups();
+      document.getElementById('group-name').focus();
+    }
+
+    function closeGroupsModal() {
+      document.getElementById('groups-modal-overlay').classList.remove('open');
+    }
+
+    async function loadGroups() {
+      if (!currentUser) return;
+      try {
+        const res = await apiFetch(API_BASE + `/api/grupos?usuario=${encodeURIComponent(currentUser)}`);
+        const data = await res.json();
+        if (!Array.isArray(data)) return;
+        groups = data;
+        renderGroups();
+        const select = document.getElementById('share-group');
+        const ownedGroups = groups.filter(group => group.propietario === currentUser);
+        select.innerHTML = ownedGroups.length
+          ? ownedGroups.map(group => `<option value="${group.id}">${escHtml(group.nombre)} (${group.miembros.length})</option>`).join('')
+          : '<option value="">No tienes grupos propios</option>';
+        document.getElementById('share-group-btn').disabled = ownedGroups.length === 0;
+      } catch (e) {
+        groups = [];
+        renderGroups();
+      }
+    }
+
+    function renderGroups() {
+      const container = document.getElementById('groups-list');
+      if (!groups.length) {
+        container.innerHTML = '<div class="empty-state" style="padding:1.2rem"><p>Aún no tienes grupos.</p></div>';
+        return;
+      }
+      container.innerHTML = groups.map(group => {
+        const owner = group.propietario === currentUser;
+        const memberRows = group.miembros.map(miembro => `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.35rem 0">
+            <span>${escHtml(miembro)}</span>
+            ${owner ? `<button class="btn-close" type="button" onclick="quitarMiembroGrupo(${group.id}, '${escHtml(miembro).replace(/'/g, '&#39;')}')" aria-label="Quitar a ${escHtml(miembro)}">${icon('close')}</button>` : ''}
+          </div>`).join('');
+        return `
+          <section style="border:1px solid var(--border);border-radius:12px;padding:.8rem;background:var(--surface2)">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem">
+              <div>
+                <strong style="display:block">${escHtml(group.nombre)}</strong>
+                <span style="color:var(--muted);font-size:.75rem">${owner ? 'Propietario' : `Compartido por ${escHtml(group.propietario)}`}</span>
+              </div>
+              ${owner ? `<button class="btn-close" type="button" onclick="eliminarGrupo(${group.id})" aria-label="Eliminar grupo">${icon('trash')}</button>` : ''}
+            </div>
+            ${owner ? `
+              <div class="form-row" style="grid-template-columns:minmax(0,1fr) auto;margin-top:.7rem">
+                <input type="text" id="member-${group.id}" placeholder="Usuario amigo" style="width:100%">
+                <button class="btn-primary-modal" type="button" onclick="agregarMiembroGrupo(${group.id})" style="padding:.72rem">Añadir</button>
+              </div>` : ''}
+            <div style="margin-top:.55rem;border-top:1px solid var(--border);font-size:.82rem">${memberRows || '<p style="color:var(--muted);padding:.45rem 0">Sin miembros</p>'}</div>
+          </section>`;
+      }).join('');
+    }
+
+    async function crearGrupo() {
+      const nombre = document.getElementById('group-name').value.trim();
+      if (!nombre) {
+        toast('Escribe el nombre del grupo', 'error');
+        return;
+      }
+      const res = await apiFetch(API_BASE + '/api/grupos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario: currentUser, nombre })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        document.getElementById('group-name').value = '';
+        await loadGroups();
+        toast('Grupo creado', 'success');
+      } else {
+        toast(data.mensaje || 'No se pudo crear el grupo', 'error');
+      }
+    }
+
+    async function agregarMiembroGrupo(grupoId) {
+      const input = document.getElementById(`member-${grupoId}`);
+      const miembro = input.value.trim();
+      if (!miembro) return;
+      const res = await apiFetch(API_BASE + `/api/grupos/${grupoId}/miembros`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario: currentUser, miembro })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        await loadGroups();
+        toast('Amigo añadido al grupo', 'success');
+      } else {
+        toast(data.mensaje || 'No se pudo añadir al amigo', 'error');
+      }
+    }
+
+    async function quitarMiembroGrupo(grupoId, miembro) {
+      const res = await apiFetch(API_BASE + `/api/grupos/${grupoId}/miembros`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario: currentUser, miembro })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        await loadGroups();
+        toast('Miembro retirado del grupo', 'success');
+      } else {
+        toast(data.mensaje || 'No se pudo retirar al miembro', 'error');
+      }
+    }
+
+    async function eliminarGrupo(grupoId) {
+      if (!confirm('¿Eliminar este grupo? Las tareas compartidas no se eliminarán.')) return;
+      const res = await apiFetch(API_BASE + `/api/grupos/${grupoId}?usuario=${encodeURIComponent(currentUser)}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.ok) {
+        await loadGroups();
+        toast('Grupo eliminado', 'success');
+      } else {
+        toast('No se pudo eliminar el grupo', 'error');
       }
     }
 
@@ -3573,6 +3796,8 @@
           && document.getElementById('auth-page').style.display !== 'none') doRegistro();
       }
       if (e.key === 'Escape' && document.getElementById('modal-overlay').classList.contains('open')) closeModal();
+      if (e.key === 'Escape' && document.getElementById('groups-modal-overlay').classList.contains('open')) closeGroupsModal();
+      if (e.key === 'Escape' && document.getElementById('share-modal-overlay').classList.contains('open')) closeShareModal();
     });
 
     // ── Restaurar sesión automáticamente al recargar la página ───

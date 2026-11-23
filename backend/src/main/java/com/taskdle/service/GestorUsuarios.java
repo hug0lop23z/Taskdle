@@ -20,11 +20,14 @@ public class GestorUsuarios {
 
     private final UsuarioDao usuarioDao = new UsuarioDao();
     private final TareaDao   tareaDao   = new TareaDao();
+    private final com.taskdle.db.GrupoDao grupoDao = new com.taskdle.db.GrupoDao();
 
     // Almacenamiento en memoria resiliente (fallback)
     private static final Map<String, Usuario> usuariosMemoria = new ConcurrentHashMap<>();
     private static final Map<String, List<Tarea>> tareasMemoria = new ConcurrentHashMap<>();
+    private static final Map<Integer, com.taskdle.model.Grupo> gruposMemoria = new ConcurrentHashMap<>();
     private static final AtomicInteger contadorId = new AtomicInteger(100);
+    private static final AtomicInteger contadorGrupo = new AtomicInteger(1);
 
     public GestorUsuarios() {
         if (Database.isAvailable()) {
@@ -89,6 +92,72 @@ public class GestorUsuarios {
             }
         }
         return null;
+    }
+
+    // ─── Grupos ──────────────────────────────────────────────────────────────
+
+    public List<com.taskdle.model.Grupo> getGrupos(String usuario) {
+        if (Database.isAvailable()) return grupoDao.listar(usuario);
+        List<com.taskdle.model.Grupo> grupos = new ArrayList<>();
+        for (com.taskdle.model.Grupo grupo : gruposMemoria.values()) {
+            if (usuario.equalsIgnoreCase(grupo.getPropietario()) || grupo.getMiembros().contains(usuario)) {
+                grupos.add(grupo);
+            }
+        }
+        return grupos;
+    }
+
+    public int crearGrupo(String propietario, String nombre) {
+        if (propietario == null || nombre == null || nombre.trim().isEmpty()) return -1;
+        if (Database.isAvailable()) return grupoDao.crear(propietario, nombre.trim());
+        int id = contadorGrupo.getAndIncrement();
+        gruposMemoria.put(id, new com.taskdle.model.Grupo(id, nombre.trim(), propietario));
+        return id;
+    }
+
+    public boolean agregarMiembroGrupo(int grupoId, String propietario, String miembro) {
+        Usuario usuario = getUsuario(miembro);
+        if (usuario == null) return false;
+        if (Database.isAvailable()) {
+            if (!grupoDao.esPropietario(grupoId, propietario)) return false;
+            return grupoDao.agregarMiembro(grupoId, usuario.getNombreUsuario());
+        }
+        com.taskdle.model.Grupo grupo = gruposMemoria.get(grupoId);
+        if (grupo == null || !propietario.equalsIgnoreCase(grupo.getPropietario())) return false;
+        if (!grupo.getMiembros().contains(usuario.getNombreUsuario())) grupo.getMiembros().add(usuario.getNombreUsuario());
+        return true;
+    }
+
+    public boolean quitarMiembroGrupo(int grupoId, String propietario, String miembro) {
+        if (Database.isAvailable()) {
+            if (!grupoDao.esPropietario(grupoId, propietario)) return false;
+            return grupoDao.quitarMiembro(grupoId, miembro);
+        }
+        com.taskdle.model.Grupo grupo = gruposMemoria.get(grupoId);
+        if (grupo == null || !propietario.equalsIgnoreCase(grupo.getPropietario())) return false;
+        return grupo.getMiembros().remove(miembro);
+    }
+
+    public boolean eliminarGrupo(int grupoId, String propietario) {
+        if (Database.isAvailable()) return grupoDao.eliminar(grupoId, propietario);
+        com.taskdle.model.Grupo grupo = gruposMemoria.get(grupoId);
+        if (grupo == null || !propietario.equalsIgnoreCase(grupo.getPropietario())) return false;
+        gruposMemoria.remove(grupoId);
+        return true;
+    }
+
+    public boolean compartirTareaGrupo(int grupoId, int tareaId, String propietario) {
+        if (Database.isAvailable()) return grupoDao.compartirTarea(grupoId, tareaId, propietario);
+        com.taskdle.model.Grupo grupo = gruposMemoria.get(grupoId);
+        if (grupo == null || !propietario.equalsIgnoreCase(grupo.getPropietario())) return false;
+        Tarea tarea = buscarTarea(tareaId, propietario);
+        if (tarea == null) return false;
+        for (String miembro : grupo.getMiembros()) {
+            if (miembro.equalsIgnoreCase(propietario)) continue;
+            List<Tarea> lista = tareasMemoria.computeIfAbsent(miembro, k -> Collections.synchronizedList(new ArrayList<>()));
+            if (lista.stream().noneMatch(t -> t.getId() == tareaId)) lista.add(tarea);
+        }
+        return true;
     }
 
     // ─── Tareas ──────────────────────────────────────────────────────────────

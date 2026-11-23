@@ -28,6 +28,7 @@ El flujo de Taskdle ayuda a pasar de una nota rápida a un plan que puedes segui
 - **Planificar con fechas:** establece una fecha y una hora límite; consulta tus tareas en calendario mensual, semanal o diario.
 - **Actuar desde el calendario:** selecciona un día u hora para iniciar una tarea con esa fecha ya preparada.
 - **Colaborar y revisar:** comparte tareas, filtra por estado o vencimiento y gestiona varias tareas a la vez.
+- **Compartir por grupos:** crea grupos como Familia o Trabajo, añade amigos registrados y comparte una tarea con todo el grupo.
 - **Mantener el ritmo:** consulta el resumen de actividad y la racha de tareas completadas.
 - **Llevarte la información:** exporta la lista a CSV o imprime y guarda una copia en PDF.
 
@@ -138,6 +139,34 @@ Visita <http://localhost:3000>. Sirve la interfaz desde `localhost` en lugar de 
 
 ## Migración de una base de datos existente
 
+### Crear la estructura de grupos
+
+Si tu base de datos ya está creada, ejecuta una sola vez esta consulta antes de desplegar la mejora de grupos:
+
+```sql
+CREATE TABLE IF NOT EXISTS grupos (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    propietario VARCHAR(50) NOT NULL REFERENCES usuarios(nombre) ON DELETE CASCADE,
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(propietario, nombre)
+);
+
+CREATE TABLE IF NOT EXISTS grupo_miembros (
+    grupo_id INT NOT NULL REFERENCES grupos(id) ON DELETE CASCADE,
+    usuario VARCHAR(50) NOT NULL REFERENCES usuarios(nombre) ON DELETE CASCADE,
+    PRIMARY KEY (grupo_id, usuario)
+);
+
+CREATE INDEX IF NOT EXISTS idx_grupo_miembros_usuario
+    ON grupo_miembros(usuario);
+
+CREATE INDEX IF NOT EXISTS idx_grupos_propietario
+    ON grupos(propietario);
+```
+
+Las bases de datos nuevas ya crean estas tablas mediante [`backend/src/main/resources/schema.sql`](backend/src/main/resources/schema.sql).
+
 El esquema actual define `tareas.fecha_limite` como `TIMESTAMPTZ` para guardar tanto la fecha como la hora. Si tu tabla aún tiene esa columna como `DATE`, ejecuta la siguiente migración **una sola vez y antes de desplegar la versión del backend que guarda la hora**. Las fechas previas se convertirán a las 23:59 de Madrid:
 
 ```sql
@@ -161,6 +190,11 @@ USING (
 | `PUT` | `/api/tareas/{id}/subtarea` | Actualizar una subtarea |
 | `POST` | `/api/tareas/{id}/compartir` | Compartir una tarea |
 | `DELETE` | `/api/tareas/{id}?usuario=...` | Eliminar una tarea o dejar de compartirla |
+| `GET` | `/api/grupos?usuario=...` | Consultar los grupos propios y compartidos |
+| `POST` | `/api/grupos` | Crear un grupo |
+| `POST` | `/api/grupos/{id}/miembros` | Añadir un amigo al grupo |
+| `DELETE` | `/api/grupos/{id}/miembros` | Retirar un amigo del grupo |
+| `POST` | `/api/grupos/{id}/tareas/{tarea}` | Compartir una tarea con todos los miembros |
 | `GET` | `/api/racha?usuario=...` | Consultar la racha |
 | `GET` | `/health` | Comprobar que el backend responde |
 

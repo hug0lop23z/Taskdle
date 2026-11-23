@@ -35,6 +35,7 @@ public class ServidorWeb {
         server.createContext("/api/tareas",    ServidorWeb::handleTareas);
         server.createContext("/api/racha",     ServidorWeb::handleRacha);
         server.createContext("/api/db-status", ServidorWeb::handleDbStatus);
+        server.createContext("/api/grupos",    ServidorWeb::handleGrupos);
         server.createContext("/health",        ex -> respond(ex, 200, "text/plain", "OK"));
         server.setExecutor(null);
         server.start();
@@ -133,6 +134,78 @@ public class ServidorWeb {
         } else {
             respond(ex, 405, "application/json", "{\"ok\":false}");
         }
+    }
+
+    // ─── Grupos ──────────────────────────────────────────────────────────────
+
+    static void handleGrupos(HttpExchange ex) throws IOException {
+        corsHeaders(ex);
+        if (preflight(ex)) return;
+
+        String path = ex.getRequestURI().getPath();
+        String method = ex.getRequestMethod();
+        String query = ex.getRequestURI().getQuery();
+
+        if ("GET".equals(method) && "/api/grupos".equals(path)) {
+            String usuario = queryParam(query, "usuario");
+            if (usuario == null) { respond(ex, 400, "application/json", "[]"); return; }
+            respond(ex, 200, "application/json", gruposJson(gestor.getGrupos(usuario)));
+            return;
+        }
+
+        if ("POST".equals(method) && "/api/grupos".equals(path)) {
+            String body = readBody(ex);
+            String propietario = extractJson(body, "usuario");
+            String nombre = extractJson(body, "nombre");
+            int id = gestor.crearGrupo(propietario, nombre);
+            if (id > 0) respond(ex, 200, "application/json", "{\"ok\":true,\"id\":" + id + "}");
+            else if (id == -2) respond(ex, 409, "application/json", "{\"ok\":false,\"mensaje\":\"Ya existe un grupo con ese nombre\"}");
+            else respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"Datos inválidos\"}");
+            return;
+        }
+
+        Matcher mMiembro = Pattern.compile("/api/grupos/(\\d+)/miembros").matcher(path);
+        if (mMiembro.matches()) {
+            int grupoId = Integer.parseInt(mMiembro.group(1));
+            String body = readBody(ex);
+            String propietario = extractJson(body, "usuario");
+            String miembro = extractJson(body, "miembro");
+            if ("POST".equals(method)) {
+                boolean ok = gestor.agregarMiembroGrupo(grupoId, propietario, miembro);
+                respond(ex, ok ? 200 : 400, "application/json", ok
+                    ? "{\"ok\":true}" : "{\"ok\":false,\"mensaje\":\"Grupo o usuario no válido\"}");
+            } else if ("DELETE".equals(method)) {
+                boolean ok = gestor.quitarMiembroGrupo(grupoId, propietario, miembro);
+                respond(ex, ok ? 200 : 400, "application/json", ok
+                    ? "{\"ok\":true}" : "{\"ok\":false,\"mensaje\":\"No se pudo quitar al miembro\"}");
+            } else {
+                respond(ex, 405, "application/json", "{\"ok\":false}");
+            }
+            return;
+        }
+
+        Matcher mGrupo = Pattern.compile("/api/grupos/(\\d+)").matcher(path);
+        if ("DELETE".equals(method) && mGrupo.matches()) {
+            int grupoId = Integer.parseInt(mGrupo.group(1));
+            String usuario = queryParam(query, "usuario");
+            boolean ok = gestor.eliminarGrupo(grupoId, usuario);
+            respond(ex, ok ? 200 : 400, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
+            return;
+        }
+
+        Matcher mShare = Pattern.compile("/api/grupos/(\\d+)/tareas/(\\d+)").matcher(path);
+        if ("POST".equals(method) && mShare.matches()) {
+            int grupoId = Integer.parseInt(mShare.group(1));
+            int tareaId = Integer.parseInt(mShare.group(2));
+            String body = readBody(ex);
+            String propietario = extractJson(body, "usuario");
+            boolean ok = gestor.compartirTareaGrupo(grupoId, tareaId, propietario);
+            respond(ex, ok ? 200 : 400, "application/json",
+                ok ? "{\"ok\":true}" : "{\"ok\":false,\"mensaje\":\"No tienes permiso para compartir esta tarea con ese grupo\"}");
+            return;
+        }
+
+        respond(ex, 404, "application/json", "{\"error\":\"ruta desconocida\"}");
     }
 
     // ─── Tareas ──────────────────────────────────────────────────────────────
@@ -378,6 +451,24 @@ public class ServidorWeb {
             }
         }
         return null;
+    }
+
+    static String gruposJson(List<com.taskdle.model.Grupo> grupos) {
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < grupos.size(); i++) {
+            if (i > 0) sb.append(",");
+            com.taskdle.model.Grupo g = grupos.get(i);
+            sb.append("{\"id\":").append(g.getId())
+              .append(",\"nombre\":\"").append(esc(g.getNombre()))
+              .append("\",\"propietario\":\"").append(esc(g.getPropietario()))
+              .append("\",\"miembros\":[");
+            for (int j = 0; j < g.getMiembros().size(); j++) {
+                if (j > 0) sb.append(",");
+                sb.append("\"").append(esc(g.getMiembros().get(j))).append("\"");
+            }
+            sb.append("]}");
+        }
+        return sb.append("]").toString();
     }
 
     static String tareaJson(Tarea t) {

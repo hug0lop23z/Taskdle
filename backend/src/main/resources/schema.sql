@@ -32,3 +32,23 @@ CREATE TABLE IF NOT EXISTS tareas_compartidas (
     usuario VARCHAR(50) NOT NULL REFERENCES usuarios(nombre) ON DELETE CASCADE,
     PRIMARY KEY (tarea_id, usuario)
 );
+
+CREATE TABLE IF NOT EXISTS grupos (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    propietario VARCHAR(50) NOT NULL REFERENCES usuarios(nombre) ON DELETE CASCADE,
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(propietario, nombre)
+);
+
+CREATE TABLE IF NOT EXISTS grupo_miembros (
+    grupo_id INT NOT NULL REFERENCES grupos(id) ON DELETE CASCADE,
+    usuario VARCHAR(50) NOT NULL REFERENCES usuarios(nombre) ON DELETE CASCADE,
+    PRIMARY KEY (grupo_id, usuario)
+);
+
+CREATE INDEX IF NOT EXISTS idx_grupo_miembros_usuario
+    ON grupo_miembros(usuario);
+
+CREATE INDEX IF NOT EXISTS idx_grupos_propietario
+    ON grupos(propietario);
