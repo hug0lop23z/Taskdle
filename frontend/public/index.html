@@ -1205,6 +1205,13 @@
       outline: none;
     }
 
+    .cal-cell.drag-over,
+    .cal-hour-row.drag-over {
+      border-color: var(--primary);
+      background: rgba(82, 121, 111, 0.12);
+      box-shadow: 0 0 0 2px rgba(82, 121, 111, 0.2) inset;
+    }
+
     .cal-grid-week .cal-cell {
       min-height: 150px;
     }
@@ -1340,11 +1347,21 @@
       max-width: 100%;
       min-width: 0;
       position: relative;
+      cursor: grab;
+      user-select: none;
     }
 
     .cal-pill:hover {
       opacity: .85;
       transform: translateX(1px);
+    }
+
+    .cal-pill:active {
+      cursor: grabbing;
+    }
+
+    .cal-pill.dragging {
+      opacity: .4;
     }
 
     .cal-pill.alta {
@@ -2461,6 +2478,7 @@
     let isSelectMode = false;
     let groups = [];
     let taskBeingShared = null;
+    let draggedTaskId = null;
     const expandedTaskDetails = new Set();
     const renderedTaskSignatures = new Map();
 
@@ -3543,6 +3561,7 @@
         + (otherMonth ? ' other-month' : '')
         + (dateStr === todayStr ? ' today' : '')
         + (tasks.length ? ' has-tasks' : '');
+      cell.dataset.date = dateStr;
       cell.setAttribute('role', 'button');
       cell.tabIndex = 0;
       cell.setAttribute('aria-label', `Crear tarea para el ${date.toLocaleDateString('es-ES', {
@@ -3555,6 +3574,7 @@
           openModalForDate(dateStr);
         }
       });
+      enableCalendarDrop(cell);
 
       const numEl = document.createElement('div');
       numEl.className = 'cal-day-num';
@@ -3591,6 +3611,8 @@
         const hourText = `${String(hour).padStart(2, '0')}:00`;
         const row = document.createElement('div');
         row.className = 'cal-hour-row';
+        row.dataset.date = dateKey;
+        row.dataset.hour = String(hour);
         row.setAttribute('role', 'button');
         row.tabIndex = 0;
         row.setAttribute('aria-label', `Crear tarea el ${date.toLocaleDateString('es-ES')} a las ${hourText}`);
@@ -3601,6 +3623,7 @@
             openModalForDate(dateKey, hourText);
           }
         });
+        enableCalendarDrop(row);
 
         const label = document.createElement('div');
         label.className = 'cal-hour-label';
@@ -3618,12 +3641,158 @@
       grid.appendChild(timeline);
     }
 
+    function enableCalendarDrop(target) {
+      target.addEventListener('dragover', event => {
+        if (draggedTaskId === null) return;
+        event.preventDefault();
+        target.classList.add('drag-over');
+      });
+      target.addEventListener('dragleave', event => {
+        if (!target.contains(event.relatedTarget)) target.classList.remove('drag-over');
+      });
+      target.addEventListener('drop', event => {
+        event.preventDefault();
+        target.classList.remove('drag-over');
+        const taskId = Number(event.dataTransfer.getData('text/plain')) || draggedTaskId;
+        moveTaskDeadline(taskId, target.dataset.date, target.dataset.hour);
+      });
+    }
+
+    function enableTouchCalendarDrag(pill, task) {
+      pill.addEventListener('pointerdown', event => {
+        if (event.pointerType !== 'touch') return;
+
+        const startX = event.clientX;
+        const startY = event.clientY;
+        let isDragging = false;
+        let dropTarget = null;
+        const timer = setTimeout(() => {
+          isDragging = true;
+          draggedTaskId = task.id;
+          pill.classList.add('dragging');
+        }, 450);
+
+        const clearDropTarget = () => {
+          if (dropTarget) dropTarget.classList.remove('drag-over');
+          dropTarget = null;
+        };
+        const finish = upEvent => {
+          clearTimeout(timer);
+          document.removeEventListener('pointermove', move);
+          document.removeEventListener('pointerup', finish);
+          document.removeEventListener('pointercancel', cancel);
+          if (isDragging) {
+            const target = document.elementFromPoint(upEvent.clientX, upEvent.clientY)
+              ?.closest('.cal-cell, .cal-hour-row');
+            clearDropTarget();
+            pill.classList.remove('dragging');
+            draggedTaskId = null;
+            if (target) moveTaskDeadline(task.id, target.dataset.date, target.dataset.hour);
+            upEvent.preventDefault();
+          }
+        };
+        const cancel = () => {
+          clearTimeout(timer);
+          clearDropTarget();
+          pill.classList.remove('dragging');
+          draggedTaskId = null;
+          document.removeEventListener('pointermove', move);
+          document.removeEventListener('pointerup', finish);
+          document.removeEventListener('pointercancel', cancel);
+        };
+        const move = moveEvent => {
+          if (!isDragging) {
+            if (Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY) > 10) clearTimeout(timer);
+            return;
+          }
+          moveEvent.preventDefault();
+          const target = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY)
+            ?.closest('.cal-cell, .cal-hour-row');
+          if (target === dropTarget) return;
+          clearDropTarget();
+          dropTarget = target;
+          if (dropTarget) dropTarget.classList.add('drag-over');
+        };
+
+        document.addEventListener('pointermove', move, { passive: false });
+        document.addEventListener('pointerup', finish);
+        document.addEventListener('pointercancel', cancel);
+      });
+    }
+
+    async function moveTaskDeadline(taskId, dateKey, hour) {
+      if (!dateKey) return;
+      const task = allTasks.find(item => item.id === taskId);
+      if (!task || !task.fechaLimite) return;
+      const currentDate = parseDeadline(task.fechaLimite);
+      if (!currentDate) return;
+
+      const [year, month, day] = dateKey.split('-').map(Number);
+      const targetDate = new Date(
+        year,
+        month - 1,
+        day,
+        hour === undefined ? currentDate.getHours() : Number(hour),
+        hour === undefined ? currentDate.getMinutes() : 0,
+        hour === undefined ? currentDate.getSeconds() : 0,
+        hour === undefined ? currentDate.getMilliseconds() : 0
+      );
+      if (targetDate.getTime() === currentDate.getTime()) return;
+
+      const previousDeadline = task.fechaLimite;
+      task.fechaLimite = targetDate.toISOString();
+      saveCache();
+      renderTaskSnapshot();
+
+      try {
+        if (taskId < 0) {
+          const queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
+          const queuedCreate = queue.find(item => item.id === -taskId && item.url === API_BASE + '/api/tareas');
+          if (!queuedCreate) throw new Error('No se pudo encontrar la tarea pendiente de sincronización');
+          const queuedBody = JSON.parse(queuedCreate.options.body);
+          queuedBody.fechaLimite = task.fechaLimite;
+          queuedCreate.options.body = JSON.stringify(queuedBody);
+          localStorage.setItem('offlineQueue', JSON.stringify(queue));
+          toast('Fecha actualizada; la tarea se sincronizará al reconectar', 'success');
+          return;
+        }
+
+        const res = await apiFetch(API_BASE + `/api/tareas/${taskId}/fecha`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: currentUser, fechaLimite: task.fechaLimite })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.mensaje || 'No se pudo actualizar la fecha');
+        toast(data.offline ? 'Cambio guardado; se sincronizará al reconectar' : 'Fecha límite actualizada', 'success');
+      } catch (e) {
+        task.fechaLimite = previousDeadline;
+        saveCache();
+        renderTaskSnapshot();
+        toast(e.message || 'No se pudo actualizar la fecha límite', 'error');
+      }
+    }
+
     function createCalendarPill(task) {
       const pill = document.createElement('div');
       const prio = task.prioridad.toLowerCase();
       const done = task.estado === 'COMPLETADA';
       pill.className = `cal-pill ${prio}${done ? ' completada' : ''}`;
       pill.title = task.titulo;
+      pill.draggable = true;
+      pill.setAttribute('aria-label', `${task.titulo}. Arrastra para cambiar la fecha límite.`);
+      pill.addEventListener('dragstart', event => {
+        draggedTaskId = task.id;
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', String(task.id));
+        pill.classList.add('dragging');
+      });
+      pill.addEventListener('dragend', () => {
+        draggedTaskId = null;
+        pill.classList.remove('dragging');
+        document.querySelectorAll('.drag-over').forEach(target => target.classList.remove('drag-over'));
+      });
+      enableTouchCalendarDrag(pill, task);
 
       const title = document.createElement('span');
       title.className = 'cal-pill-title';

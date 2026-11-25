@@ -116,6 +116,20 @@ public class TareaDao {
         }
     }
 
+    public boolean actualizarFechaLimite(int id, String usuario, Instant fechaLimite) {
+        try (Connection c = Database.getConnection();
+             PreparedStatement ps = c.prepareStatement(
+                 "UPDATE tareas SET fecha_limite=? WHERE id=? AND dueno=? AND tipo='FECHA'")) {
+            ps.setTimestamp(1, Timestamp.from(fechaLimite));
+            ps.setInt(2, id);
+            ps.setString(3, usuario);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("[TareaDao] actualizarFechaLimite: " + e.getMessage());
+            return false;
+        }
+    }
+
     public boolean eliminar(int id, String usuario) {
         try (Connection c = Database.getConnection()) {
             // Si el usuario era solo un invitado con el que se compartía, quitar el share

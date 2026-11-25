@@ -27,6 +27,7 @@ El flujo de Taskdle ayuda a pasar de una nota rápida a un plan que puedes segui
 - **Dividir tareas grandes:** agrega subtareas y consulta su avance sin perder de vista el objetivo principal.
 - **Planificar con fechas:** establece una fecha y una hora límite; consulta tus tareas en calendario mensual, semanal o diario.
 - **Actuar desde el calendario:** selecciona un día u hora para iniciar una tarea con esa fecha ya preparada.
+- **Reorganizar sobre la marcha:** arrastra una tarea a otro día para cambiar su fecha límite; en la vista diaria puedes moverla a otra hora.
 - **Colaborar y revisar:** comparte tareas, filtra por estado o vencimiento y gestiona varias tareas a la vez.
 - **Compartir por grupos:** crea grupos como Familia o Trabajo, añade amigos registrados y comparte una tarea con todo el grupo.
 - **Mantener el ritmo:** consulta el resumen de actividad y la racha de tareas completadas.
@@ -186,6 +187,7 @@ USING (
 | `POST` | `/api/registro` | Crear una cuenta |
 | `GET` | `/api/tareas?usuario=...` | Consultar tareas |
 | `POST` | `/api/tareas` | Crear una tarea |
+| `PUT` | `/api/tareas/{id}/fecha` | Cambiar la fecha y hora límite de una tarea propia |
 | `PUT` | `/api/tareas/{id}/estado` | Cambiar el estado |
 | `PUT` | `/api/tareas/{id}/subtarea` | Actualizar una subtarea |
 | `POST` | `/api/tareas/{id}/compartir` | Compartir una tarea |

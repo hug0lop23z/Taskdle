@@ -306,6 +306,26 @@ public class ServidorWeb {
             return;
         }
 
+        // PUT /api/tareas/{id}/fecha
+        Matcher mFecha = Pattern.compile("/api/tareas/(\\d+)/fecha").matcher(path);
+        if ("PUT".equals(method) && mFecha.matches()) {
+            int id = Integer.parseInt(mFecha.group(1));
+            String body = readBody(ex);
+            String nombre = extractJson(body, "usuario");
+            String fechaStr = extractJson(body, "fechaLimite");
+            try {
+                if (nombre == null || fechaStr == null) throw new IllegalArgumentException("Datos incompletos");
+                Instant fecha = Instant.parse(fechaStr);
+                boolean ok = gestor.actualizarFechaLimite(id, nombre, fecha);
+                respond(ex, ok ? 200 : 403, "application/json", ok
+                    ? "{\"ok\":true}"
+                    : "{\"ok\":false,\"mensaje\":\"No puedes cambiar la fecha de esta tarea\"}");
+            } catch (Exception e) {
+                respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"Fecha límite inválida\"}");
+            }
+            return;
+        }
+
         // PUT /api/tareas/{id}/estado
         Matcher mPut = Pattern.compile("/api/tareas/(\\d+)/estado").matcher(path);
         if ("PUT".equals(method) && mPut.matches()) {

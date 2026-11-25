@@ -26,6 +26,7 @@ public class GestorUsuarios {
     private static final Map<String, Usuario> usuariosMemoria = new ConcurrentHashMap<>();
     private static final Map<String, List<Tarea>> tareasMemoria = new ConcurrentHashMap<>();
     private static final Map<Integer, com.taskdle.model.Grupo> gruposMemoria = new ConcurrentHashMap<>();
+    private static final Map<Integer, String> propietariosTareasMemoria = new ConcurrentHashMap<>();
     private static final AtomicInteger contadorId = new AtomicInteger(100);
     private static final AtomicInteger contadorGrupo = new AtomicInteger(1);
 
@@ -186,6 +187,7 @@ public class GestorUsuarios {
         if (id <= 0) {
             id = contadorId.getAndIncrement();
             t.setId(id);
+            propietariosTareasMemoria.put(id, usuario);
             for (int i = 0; i < t.getSubtareas().size(); i++) {
                 t.getSubtareas().get(i).setId(i + 1);
             }
@@ -249,6 +251,22 @@ public class GestorUsuarios {
                     t.setEstado(nuevoEstado);
                     return true;
                 }
+            }
+        }
+        return false;
+    }
+
+    public boolean actualizarFechaLimite(int id, String usuario, java.time.Instant fechaLimite) {
+        if (fechaLimite == null) return false;
+        if (Database.isAvailable()) return tareaDao.actualizarFechaLimite(id, usuario, fechaLimite);
+
+        if (!usuario.equals(propietariosTareasMemoria.get(id))) return false;
+        List<Tarea> lista = tareasMemoria.get(usuario);
+        if (lista == null) return false;
+        for (Tarea tarea : lista) {
+            if (tarea.getId() == id && tarea instanceof TareaConFechaLimite conFecha) {
+                conFecha.setFechaLimite(fechaLimite);
+                return true;
             }
         }
         return false;
