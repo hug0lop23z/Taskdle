@@ -213,6 +213,14 @@
       margin-bottom: .45rem;
     }
 
+    .form-hint {
+      display: block;
+      margin-top: .4rem;
+      color: var(--muted);
+      font-size: .75rem;
+      line-height: 1.4;
+    }
+
     .form-group input {
       width: 100%;
       padding: .72rem 1rem;
@@ -2071,6 +2079,7 @@
     <symbol id="icon-clipboard" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="18" rx="2"/><path d="M9 4.5V3h6v1.5M9 10h6m-6 4h6"/></symbol>
     <symbol id="icon-calendar-date" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18m4 4h.01"/></symbol>
     <symbol id="icon-rotate" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.4-3"/></symbol>
+    <symbol id="icon-repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></symbol>
     <symbol id="icon-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.7 6.6-4.4m-6.6 7 6.6 4"/></symbol>
     <symbol id="icon-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
     <symbol id="icon-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-8 13h4"/></symbol>
@@ -2360,6 +2369,16 @@
             <input type="date" id="m-fecha">
             <input type="time" id="m-hora" value="23:59">
           </div>
+        </div>
+        <div class="form-group" id="repeticion-row" style="display:none">
+          <label for="m-recurrencia">Repetir tarea</label>
+          <select id="m-recurrencia">
+            <option value="">No repetir</option>
+            <option value="DIARIA">Cada día</option>
+            <option value="SEMANAL">Cada semana</option>
+            <option value="MENSUAL">Cada mes</option>
+          </select>
+          <small class="form-hint">Se programan las próximas 12 ocurrencias; al completar una se añade otra.</small>
         </div>
         <div class="err-msg" id="err-modal"></div>
         <div class="modal-actions">
@@ -2871,6 +2890,10 @@
       const cardClass = t.vencida ? 'vencida-card' : '';
 
       let metaInfo = `<span>${icon('calendar-date')} Creada: ${t.fechaCreacion}</span>`;
+      const frecuenciaLabel = { DIARIA: 'cada día', SEMANAL: 'cada semana', MENSUAL: 'cada mes' };
+      if (t.recurrenciaFrecuencia && t.recurrenciaActiva !== false) {
+        metaInfo += `<span>${icon('repeat')} Se repite ${frecuenciaLabel[t.recurrenciaFrecuencia] || 'periódicamente'}</span>`;
+      }
       if (t.fechaLimite) {
         if (t.vencida) {
           metaInfo += `<span class="vencida-tag">${icon('alert')} Vencida · ${formatDeadline(t.fechaLimite)}</span>`;
@@ -2934,6 +2957,9 @@
           <div class="task-details-content">${detallesContenido}</div>
         </details>
       ` : '';
+      const recurrenceAction = t.recurrenciaActiva && t.recurrenciaPuedeDetener
+        ? `<button class="btn-delete" onclick="detenerRepeticion(${t.id})" title="Detener repetición" aria-label="Detener repetición">${icon('repeat')}</button>`
+        : '';
 
       return `
   <div class="task-card ${prioClass} ${cardClass}" id="card-${t.id}">
@@ -2952,6 +2978,7 @@
         <option value="COMPLETADA"  ${t.estado === 'COMPLETADA' ? 'selected' : ''}>${stateLabel.COMPLETADA}</option>
       </select>
       <button class="btn-delete" onclick="compartirTarea(${t.id})" title="Compartir tarea" aria-label="Compartir tarea" style="border-color: var(--primary); color: var(--primary);">${icon('share')}</button>
+      ${recurrenceAction}
       <button class="btn-delete" onclick="eliminarTarea(${t.id})" title="Eliminar tarea" aria-label="Eliminar tarea">${icon('trash')}</button>
     </div>
   </div>`;
@@ -2973,12 +3000,15 @@
           saveCache();
           renderStats();
           renderTareas();
-          if (data.rachaCambiada) {
+          if (data.ocurrenciasCreadas === -1) {
+             toast('Tarea completada, pero no se pudo programar la siguiente repetición', 'error');
+          } else if (data.rachaCambiada) {
              toast(`¡Racha aumentada a ${data.rachaActual} días!`, 'success');
              loadRacha();
           } else {
              toast('Estado actualizado ✓', 'success');
           }
+          if (data.ocurrenciasCreadas > 0) await loadTareas();
         }
       } catch (e) { toast('Error al actualizar', 'error'); }
     }
@@ -2998,6 +3028,63 @@
           toast('Tarea eliminada', 'success');
         }
       } catch (e) { toast('Error al eliminar', 'error'); }
+    }
+
+    async function detenerRepeticion(id) {
+      if (!confirm('¿Detener esta repetición y quitar las próximas tareas programadas?')) return;
+      const task = allTasks.find(item => item.id === id);
+      if (!task || !task.recurrenciaFrecuencia) return;
+
+      try {
+        if (id < 0) {
+          const queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
+          const queuedCreate = queue.find(item => item.id === -id && item.url === API_BASE + '/api/tareas');
+          if (!queuedCreate) throw new Error('No se encontró la tarea pendiente de sincronización');
+          const queuedBody = JSON.parse(queuedCreate.options.body);
+          delete queuedBody.frecuenciaRepeticion;
+          delete queuedBody.zonaHoraria;
+          queuedCreate.options.body = JSON.stringify(queuedBody);
+          localStorage.setItem('offlineQueue', JSON.stringify(queue));
+          task.recurrenciaFrecuencia = null;
+          task.recurrenciaActiva = false;
+          saveCache();
+          renderTareas();
+          toast('Repetición cancelada antes de sincronizar', 'success');
+          return;
+        }
+
+        const res = await apiFetch(API_BASE + `/api/tareas/${id}/repeticion/detener`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: currentUser })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.mensaje || 'No se pudo detener la repetición');
+
+        if (data.offline) {
+          const serieId = task.recurrenciaSerieId;
+          const indice = task.recurrenciaIndice;
+          allTasks = allTasks.filter(item => !(
+            item.recurrenciaSerieId === serieId
+            && item.recurrenciaIndice > indice
+            && item.estado !== 'COMPLETADA'
+          ));
+          allTasks.filter(item => item.recurrenciaSerieId === serieId).forEach(item => {
+            item.recurrenciaFrecuencia = null;
+            item.recurrenciaSerieId = null;
+            item.recurrenciaIndice = null;
+            item.recurrenciaActiva = false;
+          });
+          saveCache();
+          renderTareas();
+          toast('Se detendrá al reconectar', 'success');
+        } else {
+          await loadTareas();
+          toast('Repetición detenida', 'success');
+        }
+      } catch (e) {
+        toast(e.message || 'No se pudo detener la repetición', 'error');
+      }
     }
 
     async function compartirTarea(id) {
@@ -3218,7 +3305,9 @@
         });
         const data = await res.json();
         if (data.ok) {
-           if (data.rachaCambiada) {
+           if (data.ocurrenciasCreadas === -1) {
+               toast('Paso completado, pero no se pudo programar la siguiente repetición', 'error');
+           } else if (data.rachaCambiada) {
                toast(`¡Racha aumentada a ${data.rachaActual} días!`, 'success');
                loadRacha();
            } else if (data.nuevoEstado === 'COMPLETADA') {
@@ -3333,15 +3422,19 @@
       document.getElementById('m-compartir').value = '';
       document.getElementById('m-tipo').value = 'SIMPLE';
       document.getElementById('m-prio').value = 'MEDIA';
+      document.getElementById('m-recurrencia').value = '';
       document.getElementById('m-fecha').value = '';
       document.getElementById('m-hora').value = '23:59';
       document.getElementById('fecha-row').classList.remove('visible');
+      document.getElementById('repeticion-row').style.display = 'none';
       document.getElementById('subtareas-list').innerHTML = '';
     }
 
     function toggleFecha() {
       const tipo = document.getElementById('m-tipo').value;
       document.getElementById('fecha-row').classList.toggle('visible', tipo === 'FECHA');
+      document.getElementById('repeticion-row').style.display = tipo === 'FECHA' ? '' : 'none';
+      if (tipo !== 'FECHA') document.getElementById('m-recurrencia').value = '';
     }
 
     async function doCrearTarea() {
@@ -3352,6 +3445,7 @@
       const prio = document.getElementById('m-prio').value;
       const fecha = document.getElementById('m-fecha').value;
       const hora = document.getElementById('m-hora').value;
+      const frecuenciaRepeticion = tipo === 'FECHA' ? document.getElementById('m-recurrencia').value : '';
 
       if (!titulo) { showErr('err-modal', 'El título es obligatorio'); return; }
       if (tipo === 'FECHA' && (!fecha || !hora)) { showErr('err-modal', 'Selecciona la fecha y hora límite'); return; }
@@ -3365,7 +3459,13 @@
         const subtareas = Array.from(subtareasInputs).map(i => i.value.trim()).filter(v => v !== '').join('|');
         
         const body = { usuario: currentUser, tipo, titulo, descripcion: desc, prioridad: prio, compartirCon: compartir, subtareas };
-        if (tipo === 'FECHA') body.fechaLimite = new Date(`${fecha}T${hora}`).toISOString();
+        if (tipo === 'FECHA') {
+          body.fechaLimite = new Date(`${fecha}T${hora}`).toISOString();
+          if (frecuenciaRepeticion) {
+            body.frecuenciaRepeticion = frecuenciaRepeticion;
+            body.zonaHoraria = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          }
+        }
 
         const res = await apiFetch(API_BASE + '/api/tareas', {
           method: 'POST',
@@ -3381,6 +3481,9 @@
                 id: data.tempId, titulo, descripcion: desc, tipo, prioridad: prio, estado: 'PENDIENTE',
                 fechaCreacion: new Date().toLocaleDateString('es-ES', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}), 
                 fechaLimite: body.fechaLimite || null,
+                recurrenciaFrecuencia: frecuenciaRepeticion || null,
+                recurrenciaActiva: Boolean(frecuenciaRepeticion),
+                recurrenciaPuedeDetener: Boolean(frecuenciaRepeticion),
                 subtareas: subtArr
              });
              saveCache();
@@ -3389,7 +3492,9 @@
           } else {
              await loadTareas();
           }
-          toast('Tarea creada ✓', 'success');
+          toast(frecuenciaRepeticion
+            ? (data.offline ? 'Tarea recurrente guardada para sincronizar' : `Serie creada: ${data.ocurrencias} tareas programadas`)
+            : 'Tarea creada ✓', 'success');
         } else {
           showErr('err-modal', data.mensaje || 'Error al crear');
         }

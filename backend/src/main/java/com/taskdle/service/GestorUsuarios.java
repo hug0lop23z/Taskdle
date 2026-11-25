@@ -8,6 +8,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -27,8 +30,25 @@ public class GestorUsuarios {
     private static final Map<String, List<Tarea>> tareasMemoria = new ConcurrentHashMap<>();
     private static final Map<Integer, com.taskdle.model.Grupo> gruposMemoria = new ConcurrentHashMap<>();
     private static final Map<Integer, String> propietariosTareasMemoria = new ConcurrentHashMap<>();
+    private static final Map<Integer, SerieMemoria> seriesMemoria = new ConcurrentHashMap<>();
     private static final AtomicInteger contadorId = new AtomicInteger(100);
     private static final AtomicInteger contadorGrupo = new AtomicInteger(1);
+    private static final AtomicInteger contadorSerie = new AtomicInteger(1);
+
+    private static final class SerieMemoria {
+        private final int id;
+        private final String propietario;
+        private final FrecuenciaRepeticion frecuencia;
+        private final ZonedDateTime inicio;
+        private boolean activa = true;
+
+        private SerieMemoria(int id, String propietario, FrecuenciaRepeticion frecuencia, ZonedDateTime inicio) {
+            this.id = id;
+            this.propietario = propietario;
+            this.frecuencia = frecuencia;
+            this.inicio = inicio;
+        }
+    }
 
     public GestorUsuarios() {
         if (Database.isAvailable()) {
@@ -153,10 +173,18 @@ public class GestorUsuarios {
         if (grupo == null || !propietario.equalsIgnoreCase(grupo.getPropietario())) return false;
         Tarea tarea = buscarTarea(tareaId, propietario);
         if (tarea == null) return false;
+        Integer serieId = tarea.getSerieRecurrenteId();
+        List<Tarea> tareasCompartir = serieId == null
+            ? List.of(tarea)
+            : tareasMemoria.getOrDefault(propietario, Collections.emptyList()).stream()
+                .filter(item -> serieId.equals(item.getSerieRecurrenteId()))
+                .toList();
         for (String miembro : grupo.getMiembros()) {
             if (miembro.equalsIgnoreCase(propietario)) continue;
             List<Tarea> lista = tareasMemoria.computeIfAbsent(miembro, k -> Collections.synchronizedList(new ArrayList<>()));
-            if (lista.stream().noneMatch(t -> t.getId() == tareaId)) lista.add(tarea);
+            for (Tarea ocurrencia : tareasCompartir) {
+                if (lista.stream().noneMatch(item -> item.getId() == ocurrencia.getId())) lista.add(ocurrencia);
+            }
         }
         return true;
     }
@@ -187,6 +215,7 @@ public class GestorUsuarios {
         if (id <= 0) {
             id = contadorId.getAndIncrement();
             t.setId(id);
+            t.setPropietario(usuario);
             propietariosTareasMemoria.put(id, usuario);
             for (int i = 0; i < t.getSubtareas().size(); i++) {
                 t.getSubtareas().get(i).setId(i + 1);
@@ -208,6 +237,133 @@ public class GestorUsuarios {
         return id;
     }
 
+    public List<Integer> crearSerieRecurrente(Tarea tarea, String usuario, String compartirCon,
+                                              FrecuenciaRepeticion frecuencia, ZoneId zonaHoraria,
+                                              int cantidadOcurrencias) {
+        boolean baseDisponible = Database.isAvailable();
+        List<Integer> ids = baseDisponible
+            ? tareaDao.insertarSerie(tarea, usuario, frecuencia, zonaHoraria, cantidadOcurrencias)
+            : Collections.emptyList();
+
+        if (ids.isEmpty()) {
+            if (baseDisponible) return Collections.emptyList();
+            if (!(tarea instanceof TareaConFechaLimite conFecha)) return Collections.emptyList();
+            int serieId = contadorSerie.getAndIncrement();
+            SerieMemoria serie = new SerieMemoria(serieId, usuario, frecuencia, conFecha.getFechaLimite().atZone(zonaHoraria));
+            seriesMemoria.put(serieId, serie);
+            ids = new ArrayList<>();
+            for (int indice = 0; indice < cantidadOcurrencias; indice++) {
+                Instant fecha = frecuencia.ocurrenciaDesde(serie.inicio, indice).toInstant();
+                TareaConFechaLimite ocurrencia = new TareaConFechaLimite(
+                    tarea.getTitulo(), tarea.getDescripcion(), tarea.getPrioridad(), fecha);
+                for (Subtarea subtarea : tarea.getSubtareas()) {
+                    ocurrencia.agregarSubtarea(new Subtarea(subtarea.getTitulo()));
+                }
+                prepararOcurrenciaMemoria(ocurrencia, serie, indice, usuario);
+                ids.add(ocurrencia.getId());
+            }
+        }
+
+        if (compartirCon != null && !compartirCon.isBlank()) {
+            for (int id : ids) {
+                for (String destino : compartirCon.split(",")) {
+                    if (!destino.isBlank()) compartirTarea(id, usuario, destino.trim());
+                }
+            }
+        }
+        return ids;
+    }
+
+    public int asegurarOcurrenciasFuturas(int tareaId, String usuario, int cantidadOcurrencias) {
+        if (Database.isAvailable()) {
+            return tareaDao.asegurarOcurrenciasFuturas(tareaId, usuario, cantidadOcurrencias);
+        }
+
+        Tarea tarea = buscarTarea(tareaId, usuario);
+        if (tarea == null || tarea.getSerieRecurrenteId() == null || !tarea.isRepeticionActiva()) return 0;
+        SerieMemoria serie = seriesMemoria.get(tarea.getSerieRecurrenteId());
+        if (serie == null || !serie.activa) return 0;
+
+        List<Tarea> propias = tareasMemoria.get(serie.propietario);
+        int pendientes = (int) propias.stream()
+            .filter(item -> Integer.valueOf(serie.id).equals(item.getSerieRecurrenteId()))
+            .filter(item -> item.getEstado() != Estado.COMPLETADA)
+            .count();
+        int siguienteIndice = propias.stream()
+            .filter(item -> Integer.valueOf(serie.id).equals(item.getSerieRecurrenteId()))
+            .map(Tarea::getIndiceRecurrente)
+            .filter(java.util.Objects::nonNull)
+            .mapToInt(Integer::intValue)
+            .max().orElse(tarea.getIndiceRecurrente() == null ? -1 : tarea.getIndiceRecurrente()) + 1;
+        int creadas = 0;
+        while (pendientes < cantidadOcurrencias) {
+            Instant fecha = serie.frecuencia.ocurrenciaDesde(serie.inicio, siguienteIndice).toInstant();
+            TareaConFechaLimite nueva = new TareaConFechaLimite(
+                tarea.getTitulo(), tarea.getDescripcion(), tarea.getPrioridad(), fecha);
+            for (Subtarea subtarea : tarea.getSubtareas()) {
+                nueva.agregarSubtarea(new Subtarea(subtarea.getTitulo()));
+            }
+            prepararOcurrenciaMemoria(nueva, serie, siguienteIndice, serie.propietario);
+            for (Map.Entry<String, List<Tarea>> entry : tareasMemoria.entrySet()) {
+                if (!entry.getKey().equals(serie.propietario)
+                    && entry.getValue().stream().anyMatch(item -> item.getId() == tareaId)) {
+                    entry.getValue().add(nueva);
+                }
+            }
+            siguienteIndice++;
+            pendientes++;
+            creadas++;
+        }
+        return creadas;
+    }
+
+    public boolean detenerSerieRecurrente(int tareaId, String usuario) {
+        if (Database.isAvailable()) return tareaDao.detenerSerie(tareaId, usuario);
+        if (!usuario.equals(propietariosTareasMemoria.get(tareaId))) return false;
+        Tarea actual = buscarTarea(tareaId, usuario);
+        if (actual == null || actual.getSerieRecurrenteId() == null) return false;
+        SerieMemoria serie = seriesMemoria.get(actual.getSerieRecurrenteId());
+        if (serie == null || !serie.activa || !usuario.equals(serie.propietario)) return false;
+        serie.activa = false;
+
+        int indiceActual = actual.getIndiceRecurrente() == null ? -1 : actual.getIndiceRecurrente();
+        List<Tarea> propias = tareasMemoria.get(usuario);
+        List<Integer> eliminar = propias.stream()
+            .filter(item -> Integer.valueOf(serie.id).equals(item.getSerieRecurrenteId()))
+            .filter(item -> item.getIndiceRecurrente() != null && item.getIndiceRecurrente() > indiceActual)
+            .filter(item -> item.getEstado() != Estado.COMPLETADA)
+            .map(Tarea::getId)
+            .toList();
+        for (List<Tarea> lista : tareasMemoria.values()) {
+            lista.removeIf(item -> eliminar.contains(item.getId()));
+            for (Tarea item : lista) {
+                if (Integer.valueOf(serie.id).equals(item.getSerieRecurrenteId())) {
+                    item.setSerieRecurrenteId(null);
+                    item.setIndiceRecurrente(null);
+                    item.setFrecuenciaRepeticion(null);
+                    item.setRepeticionActiva(false);
+                }
+            }
+        }
+        eliminar.forEach(propietariosTareasMemoria::remove);
+        return true;
+    }
+
+    private void prepararOcurrenciaMemoria(Tarea tarea, SerieMemoria serie, int indice, String usuario) {
+        int id = contadorId.getAndIncrement();
+        tarea.setId(id);
+        tarea.setPropietario(usuario);
+        tarea.setSerieRecurrenteId(serie.id);
+        tarea.setIndiceRecurrente(indice);
+        tarea.setFrecuenciaRepeticion(serie.frecuencia);
+        tarea.setRepeticionActiva(true);
+        for (int i = 0; i < tarea.getSubtareas().size(); i++) {
+            tarea.getSubtareas().get(i).setId(i + 1);
+        }
+        propietariosTareasMemoria.put(id, usuario);
+        tareasMemoria.computeIfAbsent(usuario, key -> Collections.synchronizedList(new ArrayList<>())).add(tarea);
+    }
+
     public boolean compartirTarea(int id, String usuarioOrigen, String usuarioDestino) {
         if (usuarioDestino == null || usuarioDestino.isBlank()) return false;
         if (usuarioOrigen != null && usuarioOrigen.equalsIgnoreCase(usuarioDestino.trim())) return false;
@@ -226,9 +382,15 @@ public class GestorUsuarios {
         Tarea t = buscarTarea(id, usuarioOrigen);
         if (t != null) {
             List<Tarea> listaDestino = tareasMemoria.computeIfAbsent(nombreRealDestino, k -> Collections.synchronizedList(new ArrayList<>()));
-            boolean yaExiste = listaDestino.stream().anyMatch(item -> item.getId() == id);
-            if (!yaExiste) {
-                listaDestino.add(t);
+            Integer serieId = t.getSerieRecurrenteId();
+            List<Tarea> tareasCompartir = serieId == null
+                ? List.of(t)
+                : tareasMemoria.getOrDefault(usuarioOrigen, Collections.emptyList()).stream()
+                    .filter(item -> serieId.equals(item.getSerieRecurrenteId()))
+                    .toList();
+            for (Tarea tareaCompartida : tareasCompartir) {
+                boolean yaExiste = listaDestino.stream().anyMatch(item -> item.getId() == tareaCompartida.getId());
+                if (!yaExiste) listaDestino.add(tareaCompartida);
             }
             compartido = true;
         }

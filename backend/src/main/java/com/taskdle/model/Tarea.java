@@ -14,6 +14,11 @@ public abstract class Tarea {
     private Estado estado;
     private LocalDateTime fechaCreacion;
     private List<Subtarea> subtareas;
+    private Integer serieRecurrenteId;
+    private Integer indiceRecurrente;
+    private FrecuenciaRepeticion frecuenciaRepeticion;
+    private boolean repeticionActiva;
+    private String propietario;
 
     protected Tarea(String titulo, String descripcion, Prioridad prioridad) {
         this.titulo        = titulo;
@@ -58,4 +63,14 @@ public abstract class Tarea {
     public void setEstado(Estado e)            { this.estado = e; }
     public LocalDateTime getFechaCreacion()    { return fechaCreacion; }
     public void setFechaCreacion(LocalDateTime f) { this.fechaCreacion = f; }
+    public Integer getSerieRecurrenteId() { return serieRecurrenteId; }
+    public void setSerieRecurrenteId(Integer id) { this.serieRecurrenteId = id; }
+    public Integer getIndiceRecurrente() { return indiceRecurrente; }
+    public void setIndiceRecurrente(Integer indice) { this.indiceRecurrente = indice; }
+    public FrecuenciaRepeticion getFrecuenciaRepeticion() { return frecuenciaRepeticion; }
+    public void setFrecuenciaRepeticion(FrecuenciaRepeticion frecuencia) { this.frecuenciaRepeticion = frecuencia; }
+    public boolean isRepeticionActiva() { return repeticionActiva; }
+    public void setRepeticionActiva(boolean activa) { this.repeticionActiva = activa; }
+    public String getPropietario() { return propietario; }
+    public void setPropietario(String propietario) { this.propietario = propietario; }
 }

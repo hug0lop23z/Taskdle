@@ -11,6 +11,7 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.*;
@@ -227,7 +228,7 @@ public class ServidorWeb {
             List<Tarea> tareas = gestor.getTareas(nombre);
             for (int i = 0; i < tareas.size(); i++) {
                 if (i > 0) sb.append(",");
-                sb.append(tareaJson(tareas.get(i)));
+                sb.append(tareaJson(tareas.get(i), nombre));
             }
             respond(ex, 200, "application/json", sb.append("]").toString());
             return;
@@ -243,6 +244,8 @@ public class ServidorWeb {
             String prioStr     = extractJson(body, "prioridad");
             String subtareasStr = extractJson(body, "subtareas");
             String compartirCon = extractJson(body, "compartirCon");
+            String frecuenciaStr = extractJson(body, "frecuenciaRepeticion");
+            String zonaStr = extractJson(body, "zonaHoraria");
 
             if (nombre == null || titulo == null || titulo.isBlank()) {
                 respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"Datos inválidos\"}");
@@ -250,6 +253,20 @@ public class ServidorWeb {
             }
 
             Prioridad prio = Prioridad.fromString(prioStr);
+            FrecuenciaRepeticion frecuencia = null;
+            ZoneId zonaHoraria = null;
+            if (frecuenciaStr != null && !frecuenciaStr.isBlank()) {
+                try {
+                    if (!"FECHA".equals(tipo)) throw new IllegalArgumentException("La repetición requiere fecha límite");
+                    frecuencia = FrecuenciaRepeticion.fromString(frecuenciaStr);
+                    if (zonaStr == null || zonaStr.isBlank()) throw new IllegalArgumentException("Falta la zona horaria");
+                    zonaHoraria = ZoneId.of(zonaStr);
+                } catch (RuntimeException e) {
+                    respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"Frecuencia o zona horaria inválida\"}");
+                    return;
+                }
+            }
+
             Tarea tarea;
             if ("FECHA".equals(tipo)) {
                 String fechaStr = extractJson(body, "fechaLimite");
@@ -265,9 +282,13 @@ public class ServidorWeb {
                 }
             }
 
-            int newId = gestor.crearTarea(tarea, nombre, compartirCon);
+            List<Integer> ocurrencias = frecuencia == null
+                ? List.of(gestor.crearTarea(tarea, nombre, compartirCon))
+                : gestor.crearSerieRecurrente(tarea, nombre, compartirCon, frecuencia, zonaHoraria, 12);
+            int newId = ocurrencias.isEmpty() ? -1 : ocurrencias.get(0);
             if (newId > 0) {
-                respond(ex, 200, "application/json", "{\"ok\":true,\"id\":" + newId + "}");
+                respond(ex, 200, "application/json", "{\"ok\":true,\"id\":" + newId +
+                    ",\"ocurrencias\":" + ocurrencias.size() + "}");
             } else {
                 respond(ex, 500, "application/json", "{\"ok\":false,\"mensaje\":\"Error al guardar en base de datos\"}");
             }
@@ -337,6 +358,9 @@ public class ServidorWeb {
             try {
                 Estado nuevoEst = Estado.fromString(estStr);
                 boolean ok = gestor.actualizarEstado(id, nombre, nuevoEst);
+                int ocurrenciasCreadas = ok && nuevoEst == Estado.COMPLETADA
+                    ? gestor.asegurarOcurrenciasFuturas(id, nombre, 12)
+                    : 0;
                 boolean rachaCambio = false;
                 int rachaActual = 0;
                 if (ok && nuevoEst == Estado.COMPLETADA) {
@@ -346,7 +370,8 @@ public class ServidorWeb {
                 }
                 if (ok) {
                     respond(ex, 200, "application/json",
-                        "{\"ok\":true,\"rachaCambiada\":" + rachaCambio + ",\"rachaActual\":" + rachaActual + "}");
+                        "{\"ok\":true,\"rachaCambiada\":" + rachaCambio + ",\"rachaActual\":" + rachaActual +
+                        ",\"ocurrenciasCreadas\":" + ocurrenciasCreadas + "}");
                 } else {
                     respond(ex, 404, "application/json", "{\"ok\":false}");
                 }
@@ -374,12 +399,14 @@ public class ServidorWeb {
                     Tarea t = gestor.buscarTarea(id, nombre);
                     boolean rachaCambio = false;
                     int rachaActual = 0;
+                    int ocurrenciasCreadas = 0;
                     String nuevoEstado = t != null ? t.getEstado().name() : "PENDIENTE";
                     
                     if (t != null) {
                         boolean allComplete = t.getSubtareas().stream().allMatch(Subtarea::isCompletada);
                         if (allComplete && t.getEstado() != Estado.COMPLETADA) {
                             gestor.actualizarEstado(id, nombre, Estado.COMPLETADA);
+                            ocurrenciasCreadas = gestor.asegurarOcurrenciasFuturas(id, nombre, 12);
                             rachaCambio = gestor.registrarCompletacion(nombre);
                             Usuario u = gestor.getUsuario(nombre);
                             if (u != null) rachaActual = u.getRachaActual();
@@ -393,13 +420,26 @@ public class ServidorWeb {
                     respond(ex, 200, "application/json",
                         "{\"ok\":true,\"rachaCambiada\":" + rachaCambio +
                         ",\"rachaActual\":" + rachaActual +
-                        ",\"nuevoEstado\":\"" + nuevoEstado + "\"}");
+                        ",\"nuevoEstado\":\"" + nuevoEstado + "\"" +
+                        ",\"ocurrenciasCreadas\":" + ocurrenciasCreadas + "}");
                 } else {
                     respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"Se requiere subtareaId\"}");
                 }
             } catch (Exception e) {
                 respond(ex, 500, "application/json", "{\"ok\":false}");
             }
+            return;
+        }
+
+        // PUT /api/tareas/{id}/repeticion/detener
+        Matcher mStopRecurrence = Pattern.compile("/api/tareas/(\\d+)/repeticion/detener").matcher(path);
+        if ("PUT".equals(method) && mStopRecurrence.matches()) {
+            int id = Integer.parseInt(mStopRecurrence.group(1));
+            String nombre = extractJson(readBody(ex), "usuario");
+            boolean ok = nombre != null && gestor.detenerSerieRecurrente(id, nombre);
+            respond(ex, ok ? 200 : 403, "application/json", ok
+                ? "{\"ok\":true}"
+                : "{\"ok\":false,\"mensaje\":\"No se pudo detener esta repetición\"}");
             return;
         }
 
@@ -491,7 +531,7 @@ public class ServidorWeb {
         return sb.append("]").toString();
     }
 
-    static String tareaJson(Tarea t) {
+    static String tareaJson(Tarea t, String usuario) {
         StringBuilder sb = new StringBuilder("{");
         sb.append("\"id\":").append(t.getId()).append(",");
         sb.append("\"tipo\":\"").append(esc(t.getTipoTarea())).append("\",");
@@ -505,6 +545,15 @@ public class ServidorWeb {
             sb.append(",\"fechaLimite\":\"").append(tcfl.getFechaLimite()).append("\"");
             sb.append(",\"vencida\":").append(tcfl.estaVencida());
             sb.append(",\"diasRestantes\":").append(tcfl.getDiasRestantes());
+        }
+        if (t.getSerieRecurrenteId() != null && t.getFrecuenciaRepeticion() != null) {
+            sb.append(",\"recurrenciaSerieId\":").append(t.getSerieRecurrenteId());
+            if (t.getIndiceRecurrente() != null) {
+                sb.append(",\"recurrenciaIndice\":").append(t.getIndiceRecurrente());
+            }
+            sb.append(",\"recurrenciaFrecuencia\":\"").append(t.getFrecuenciaRepeticion().name()).append("\"");
+            sb.append(",\"recurrenciaActiva\":").append(t.isRepeticionActiva());
+            sb.append(",\"recurrenciaPuedeDetener\":").append(usuario.equals(t.getPropietario()));
         }
         sb.append(",\"subtareas\":[");
         List<Subtarea> subs = t.getSubtareas();

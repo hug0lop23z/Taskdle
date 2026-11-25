@@ -104,7 +104,10 @@ public class GrupoDao {
              PreparedStatement miembros = c.prepareStatement(
                  "SELECT usuario FROM grupo_miembros WHERE grupo_id=?");
              PreparedStatement share = c.prepareStatement(
-                 "INSERT INTO tareas_compartidas(tarea_id, usuario) VALUES(?,?) ON CONFLICT DO NOTHING");
+                 "INSERT INTO tareas_compartidas(tarea_id, usuario) " +
+                 "SELECT t.id, ? FROM tareas t WHERE t.id=? OR t.recurrencia_id=" +
+                 "(SELECT recurrencia_id FROM tareas WHERE id=? AND recurrencia_id IS NOT NULL) " +
+                 "ON CONFLICT DO NOTHING");
              PreparedStatement ownership = c.prepareStatement(
                  "SELECT 1 FROM tareas WHERE id=? AND dueno=?")) {
             ownership.setInt(1, tareaId);
@@ -113,8 +116,9 @@ public class GrupoDao {
             miembros.setInt(1, grupoId);
             try (ResultSet rs = miembros.executeQuery()) {
                 while (rs.next()) {
-                    share.setInt(1, tareaId);
-                    share.setString(2, rs.getString("usuario"));
+                    share.setString(1, rs.getString("usuario"));
+                    share.setInt(2, tareaId);
+                    share.setInt(3, tareaId);
                     share.executeUpdate();
                 }
             }

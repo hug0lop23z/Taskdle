@@ -7,6 +7,15 @@ CREATE TABLE IF NOT EXISTS usuarios (
     ultima_fecha_completada DATE
 );
 
+CREATE TABLE IF NOT EXISTS tareas_recurrentes (
+    id SERIAL PRIMARY KEY,
+    dueno VARCHAR(50) NOT NULL REFERENCES usuarios(nombre) ON DELETE CASCADE,
+    frecuencia VARCHAR(10) NOT NULL CHECK (frecuencia IN ('DIARIA', 'SEMANAL', 'MENSUAL')),
+    fecha_base TIMESTAMPTZ NOT NULL,
+    zona_horaria VARCHAR(64) NOT NULL,
+    activa BOOLEAN NOT NULL DEFAULT TRUE
+);
+
 CREATE TABLE IF NOT EXISTS tareas (
     id SERIAL PRIMARY KEY,
     dueno VARCHAR(50) NOT NULL REFERENCES usuarios(nombre) ON DELETE CASCADE,
@@ -16,8 +25,17 @@ CREATE TABLE IF NOT EXISTS tareas (
     prioridad VARCHAR(10) NOT NULL DEFAULT 'MEDIA',
     estado VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE',
     fecha_creacion TIMESTAMP NOT NULL DEFAULT NOW(),
-    fecha_limite TIMESTAMPTZ
+    fecha_limite TIMESTAMPTZ,
+    recurrencia_id INT REFERENCES tareas_recurrentes(id) ON DELETE SET NULL,
+    indice_recurrencia INT
 );
+
+ALTER TABLE tareas ADD COLUMN IF NOT EXISTS recurrencia_id INT REFERENCES tareas_recurrentes(id) ON DELETE SET NULL;
+ALTER TABLE tareas ADD COLUMN IF NOT EXISTS indice_recurrencia INT;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tareas_recurrencia_indice
+    ON tareas(recurrencia_id, indice_recurrencia)
+    WHERE recurrencia_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS subtareas (
     id SERIAL PRIMARY KEY,

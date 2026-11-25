@@ -28,6 +28,7 @@ El flujo de Taskdle ayuda a pasar de una nota rápida a un plan que puedes segui
 - **Planificar con fechas:** establece una fecha y una hora límite; consulta tus tareas en calendario mensual, semanal o diario.
 - **Actuar desde el calendario:** selecciona un día u hora para iniciar una tarea con esa fecha ya preparada.
 - **Reorganizar sobre la marcha:** arrastra una tarea a otro día para cambiar su fecha límite; en la vista diaria puedes moverla a otra hora.
+- **Programar tareas recurrentes:** repite una tarea cada día, semana o mes; mantiene 12 ocurrencias programadas y añade otra al completar una.
 - **Colaborar y revisar:** comparte tareas, filtra por estado o vencimiento y gestiona varias tareas a la vez.
 - **Compartir por grupos:** crea grupos como Familia o Trabajo, añade amigos registrados y comparte una tarea con todo el grupo.
 - **Mantener el ritmo:** consulta el resumen de actividad y la racha de tareas completadas.
@@ -83,7 +84,7 @@ flowchart LR
 
 1. **La interfaz** se sirve como contenido estático. No necesita un proceso de compilación del frontend.
 2. **El navegador** llama a la API REST para iniciar sesión, cargar tareas y enviar cambios. En desarrollo local, la API apunta a `http://localhost:8080`; en despliegue, la URL se resuelve según el host y la configuración de la aplicación.
-3. **El backend Java** procesa las operaciones de usuarios, tareas, subtareas, fechas límite y tareas compartidas.
+3. **El backend Java** procesa las operaciones de usuarios, tareas, subtareas, fechas límite, repeticiones y tareas compartidas.
 4. **La persistencia** se realiza en PostgreSQL cuando está configurada la variable `DATABASE_URL`. Sin ella, el backend funciona con almacenamiento en memoria, que se pierde al detener el proceso.
 
 ### Tecnologías
@@ -168,6 +169,33 @@ CREATE INDEX IF NOT EXISTS idx_grupos_propietario
 
 Las bases de datos nuevas ya crean estas tablas mediante [`backend/src/main/resources/schema.sql`](backend/src/main/resources/schema.sql).
 
+### Añadir tareas recurrentes
+
+Si tu base de datos ya existe, ejecuta esta migración una vez. También está incluida en `schema.sql` para instalaciones nuevas:
+
+```sql
+CREATE TABLE IF NOT EXISTS tareas_recurrentes (
+    id SERIAL PRIMARY KEY,
+    dueno VARCHAR(50) NOT NULL REFERENCES usuarios(nombre) ON DELETE CASCADE,
+    frecuencia VARCHAR(10) NOT NULL CHECK (frecuencia IN ('DIARIA', 'SEMANAL', 'MENSUAL')),
+    fecha_base TIMESTAMPTZ NOT NULL,
+    zona_horaria VARCHAR(64) NOT NULL,
+    activa BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+ALTER TABLE tareas
+    ADD COLUMN IF NOT EXISTS recurrencia_id INT
+        REFERENCES tareas_recurrentes(id) ON DELETE SET NULL;
+ALTER TABLE tareas
+    ADD COLUMN IF NOT EXISTS indice_recurrencia INT;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tareas_recurrencia_indice
+    ON tareas(recurrencia_id, indice_recurrencia)
+    WHERE recurrencia_id IS NOT NULL;
+```
+
+La repetición mensual conserva el día original y utiliza el último día disponible en meses más cortos. Al detener una serie se conservan las tareas ya completadas y la ocurrencia seleccionada; se eliminan las siguientes que aún no estén completadas.
+
 El esquema actual define `tareas.fecha_limite` como `TIMESTAMPTZ` para guardar tanto la fecha como la hora. Si tu tabla aún tiene esa columna como `DATE`, ejecuta la siguiente migración **una sola vez y antes de desplegar la versión del backend que guarda la hora**. Las fechas previas se convertirán a las 23:59 de Madrid:
 
 ```sql
@@ -189,6 +217,7 @@ USING (
 | `POST` | `/api/tareas` | Crear una tarea |
 | `PUT` | `/api/tareas/{id}/fecha` | Cambiar la fecha y hora límite de una tarea propia |
 | `PUT` | `/api/tareas/{id}/estado` | Cambiar el estado |
+| `PUT` | `/api/tareas/{id}/repeticion/detener` | Detener una serie recurrente propia |
 | `PUT` | `/api/tareas/{id}/subtarea` | Actualizar una subtarea |
 | `POST` | `/api/tareas/{id}/compartir` | Compartir una tarea |
 | `DELETE` | `/api/tareas/{id}?usuario=...` | Eliminar una tarea o dejar de compartirla |
