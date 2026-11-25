@@ -1175,6 +1175,10 @@
       gap: .4rem;
     }
 
+    .cal-grid-month {
+      grid-auto-rows: 88px;
+    }
+
     .cal-cell {
       min-width: 0;
       background: var(--surface);
@@ -1187,6 +1191,12 @@
       gap: .3rem;
       transition: border-color .2s;
       cursor: pointer;
+    }
+
+    .cal-grid-month .cal-cell {
+      height: 88px;
+      min-height: 0;
+      overflow: hidden;
     }
 
     .cal-cell:hover,
@@ -1265,7 +1275,23 @@
     }
 
     .cal-grid-month .cal-pill {
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
+    }
+
+    .cal-grid-month .cal-pill-title {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .cal-more-count {
+      align-self: flex-start;
+      color: var(--muted);
+      font-size: .68rem;
+      font-weight: 700;
+      line-height: 1;
+      padding: 0 .2rem;
     }
 
     .cal-hour-tasks .cal-pill {
@@ -1925,7 +1951,7 @@
       }
 
       .cal-grid-month .cal-cell {
-        overflow: hidden;
+        height: 58px;
       }
 
       .cal-pill {
@@ -1936,24 +1962,12 @@
         white-space: nowrap;
       }
 
-      .cal-grid-month .cal-pill-title {
-        display: block;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
       .cal-grid-month .cal-pill-time {
         display: none;
       }
 
       .cal-more-count {
-        align-self: flex-start;
-        color: var(--muted);
         font-size: .58rem;
-        font-weight: 700;
-        line-height: 1;
-        padding: 0 .2rem;
       }
 
       .cal-grid-week {
@@ -3549,8 +3563,7 @@
         : date.getDate();
       cell.appendChild(numEl);
 
-      const compactMonth = calendarMode === 'month'
-        && window.matchMedia('(max-width: 640px)').matches;
+      const compactMonth = calendarMode === 'month';
       const visibleTasks = compactMonth ? tasks.slice(0, 1) : tasks;
       visibleTasks.forEach(t => {
         cell.appendChild(createCalendarPill(t));
