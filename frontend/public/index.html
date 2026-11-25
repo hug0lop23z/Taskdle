@@ -1947,6 +1947,15 @@
         display: none;
       }
 
+      .cal-more-count {
+        align-self: flex-start;
+        color: var(--muted);
+        font-size: .58rem;
+        font-weight: 700;
+        line-height: 1;
+        padding: 0 .2rem;
+      }
+
       .cal-grid-week {
         grid-template-columns: minmax(0, 1fr);
       }
@@ -3540,9 +3549,21 @@
         : date.getDate();
       cell.appendChild(numEl);
 
-      tasks.forEach(t => {
+      const compactMonth = calendarMode === 'month'
+        && window.matchMedia('(max-width: 640px)').matches;
+      const visibleTasks = compactMonth ? tasks.slice(0, 1) : tasks;
+      visibleTasks.forEach(t => {
         cell.appendChild(createCalendarPill(t));
       });
+
+      if (compactMonth && tasks.length > 1) {
+        const more = document.createElement('span');
+        more.className = 'cal-more-count';
+        more.textContent = `+${tasks.length - 1}`;
+        more.title = `${tasks.length - 1} tareas más`;
+        more.setAttribute('aria-label', `${tasks.length - 1} tareas más`);
+        cell.appendChild(more);
+      }
 
       grid.appendChild(cell);
     }
