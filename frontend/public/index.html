@@ -1060,8 +1060,9 @@
     }
 
     #modal-overlay .modal-form {
+      flex: 1 1 auto;
       min-height: 0;
-      padding: .2rem 1.7rem 1.6rem;
+      padding: .2rem 1.7rem .8rem;
       overflow-y: auto;
       overscroll-behavior: contain;
       scrollbar-width: thin;
@@ -1273,12 +1274,22 @@
       flex: 0 0 auto;
     }
 
-    #modal-overlay .modal-actions {
-      position: sticky;
-      bottom: 0;
-      margin: 1rem -1.7rem -1.6rem;
-      padding: .9rem 1.7rem 0;
+    #modal-overlay .modal-footer {
+      flex: 0 0 auto;
+      padding: .8rem 1.7rem 1.2rem;
+      border-top: 1px solid var(--border);
       background: var(--surface);
+    }
+
+    #modal-overlay .modal-footer .err-msg {
+      margin: 0 0 .65rem;
+    }
+
+    #modal-overlay .modal-actions {
+      position: static;
+      margin: 0;
+      padding: 0;
+      background: transparent;
     }
 
     #modal-overlay .btn-primary-modal,
@@ -2427,7 +2438,7 @@
       }
 
       #modal-overlay .modal-form {
-        padding: .1rem 1.2rem calc(1.25rem + env(safe-area-inset-bottom));
+        padding: .1rem 1.2rem .75rem;
         -webkit-overflow-scrolling: touch;
       }
 
@@ -2435,10 +2446,8 @@
         padding: .8rem .9rem;
       }
 
-      #modal-overlay .modal-actions {
-        margin: .7rem -1.2rem calc(-1.25rem - env(safe-area-inset-bottom));
-        padding: .8rem 1.2rem calc(.75rem + env(safe-area-inset-bottom));
-        background: var(--surface);
+      #modal-overlay .modal-footer {
+        padding: .75rem 1.2rem calc(.75rem + env(safe-area-inset-bottom));
       }
 
       #modal-overlay .task-extra-item summary {
@@ -2467,6 +2476,45 @@
     @media (max-width: 360px) {
       #modal-overlay .extra-copy small {
         display: none;
+      }
+    }
+
+    @media (max-height: 700px) {
+      #modal-overlay .modal-header {
+        padding-top: .9rem;
+        padding-bottom: .45rem;
+      }
+
+      #modal-overlay .modal-form {
+        padding-top: 0;
+        padding-bottom: .4rem;
+      }
+
+      #modal-overlay .modal-form .form-group {
+        margin-bottom: .65rem;
+      }
+
+      #modal-overlay .task-options-heading {
+        margin: 0 0 .4rem;
+      }
+
+      #modal-overlay .task-extra-list {
+        gap: .4rem;
+      }
+
+      #modal-overlay .task-extra-item summary {
+        padding: .52rem .7rem;
+      }
+
+      #modal-overlay .extra-icon {
+        width: 34px;
+        height: 34px;
+        flex-basis: 34px;
+      }
+
+      #modal-overlay .modal-footer {
+        padding-top: .65rem;
+        padding-bottom: .8rem;
       }
     }
   </style>
@@ -2832,6 +2880,8 @@
             </div>
           </details>
         </div>
+      </div>
+      <div class="modal-footer">
         <div class="err-msg" id="err-modal"></div>
         <div class="modal-actions">
           <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
