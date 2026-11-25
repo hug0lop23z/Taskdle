@@ -1910,7 +1910,8 @@
       }
 
       .cal-cell {
-        min-height: 58px;
+        height: 58px;
+        min-height: 0;
         padding: .35rem;
       }
 
@@ -1919,9 +1920,31 @@
         gap: .2rem;
       }
 
+      .cal-grid-month {
+        grid-auto-rows: 58px;
+      }
+
+      .cal-grid-month .cal-cell {
+        overflow: hidden;
+      }
+
       .cal-pill {
+        flex-wrap: nowrap;
+        overflow: hidden;
         padding: .15rem .25rem;
         font-size: .6rem;
+        white-space: nowrap;
+      }
+
+      .cal-grid-month .cal-pill-title {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .cal-grid-month .cal-pill-time {
+        display: none;
       }
 
       .cal-grid-week {
