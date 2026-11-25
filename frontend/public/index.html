@@ -1024,17 +1024,27 @@
     }
 
     #modal-overlay .modal-heading {
+      display: flex;
+      align-items: center;
+      gap: .9rem;
       min-width: 0;
     }
 
-    #modal-overlay .modal-eyebrow {
-      display: block;
-      margin-bottom: .35rem;
+    #modal-overlay .modal-mark {
+      display: grid;
+      width: 44px;
+      height: 44px;
+      flex: 0 0 44px;
+      place-items: center;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface2);
       color: var(--primary);
-      font-size: .68rem;
-      font-weight: 700;
-      letter-spacing: .12em;
-      text-transform: uppercase;
+    }
+
+    #modal-overlay .modal-mark .icon {
+      width: 22px;
+      height: 22px;
     }
 
     #modal-overlay .modal-header h3 {
@@ -1043,9 +1053,9 @@
     }
 
     #modal-overlay .modal-subtitle {
-      margin-top: .35rem;
+      margin-top: .2rem;
       color: var(--muted);
-      font-size: .88rem;
+      font-size: .82rem;
       line-height: 1.45;
     }
 
@@ -1058,65 +1068,135 @@
     }
 
     #modal-overlay .task-title-group input {
-      padding: .9rem 1rem;
+      padding: .95rem 1rem;
+      border-color: transparent;
+      border-radius: 14px;
+      background: var(--surface2);
       font-size: 1.05rem;
+    }
+
+    #modal-overlay .task-title-group input:focus {
+      border-color: var(--primary);
+    }
+
+    #modal-overlay .task-title-group label {
+      color: var(--text);
+      font-size: .9rem;
+      font-weight: 650;
     }
 
     #modal-overlay .task-core-row {
       margin-top: .15rem;
     }
 
-    #modal-overlay .task-optional-details {
-      margin-top: .25rem;
+    #modal-overlay .task-options-heading {
+      display: flex;
+      align-items: center;
+      gap: .7rem;
+      margin: .2rem 0 .65rem;
+      color: var(--muted);
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    #modal-overlay .task-options-heading::after {
+      height: 1px;
+      flex: 1;
+      background: var(--border);
+      content: '';
+    }
+
+    #modal-overlay .task-extra-list {
+      display: grid;
+      gap: .55rem;
+    }
+
+    #modal-overlay .task-extra-item {
+      overflow: hidden;
       border: 1px solid var(--border);
-      border-radius: 14px;
+      border-radius: 15px;
+      background: var(--surface);
+    }
+
+    #modal-overlay .task-extra-item summary {
+      display: flex;
+      align-items: center;
+      gap: .8rem;
+      padding: .72rem .8rem;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      list-style: none;
+      transition: background .18s ease;
+    }
+
+    #modal-overlay .task-extra-item summary:hover {
       background: var(--surface2);
     }
 
-    #modal-overlay .task-optional-details summary {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: .75rem;
-      padding: .85rem 1rem;
-      color: var(--text);
-      font-size: .9rem;
-      font-weight: 600;
-      cursor: pointer;
-      list-style: none;
-    }
-
-    #modal-overlay .task-optional-details summary::-webkit-details-marker {
+    #modal-overlay .task-extra-item summary::-webkit-details-marker {
       display: none;
     }
 
-    #modal-overlay .task-optional-details summary::after {
-      width: 8px;
-      height: 8px;
-      flex: 0 0 8px;
-      border-right: 1.5px solid var(--muted);
-      border-bottom: 1.5px solid var(--muted);
-      content: '';
-      transform: rotate(45deg) translateY(-2px);
+    #modal-overlay .extra-icon {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      flex: 0 0 38px;
+      place-items: center;
+      border-radius: 12px;
+      background: var(--surface2);
+      color: var(--primary);
+    }
+
+    #modal-overlay .extra-icon .icon {
+      width: 18px;
+      height: 18px;
+    }
+
+    #modal-overlay .extra-copy {
+      display: grid;
+      min-width: 0;
+      flex: 1;
+      gap: .12rem;
+    }
+
+    #modal-overlay .extra-copy strong {
+      font-size: .88rem;
+      font-weight: 650;
+    }
+
+    #modal-overlay .extra-copy small {
+      overflow: hidden;
+      color: var(--muted);
+      font-size: .75rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    #modal-overlay .extra-chevron {
+      width: 17px;
+      height: 17px;
+      flex: 0 0 17px;
+      color: var(--muted);
       transition: transform .18s ease;
     }
 
-    #modal-overlay .task-optional-details[open] summary::after {
-      transform: rotate(225deg) translate(-2px, -1px);
+    #modal-overlay .task-extra-item[open] .extra-chevron {
+      transform: rotate(180deg);
     }
 
-    #modal-overlay .task-optional-details summary span {
-      margin-left: auto;
-      color: var(--muted);
-      font-size: .78rem;
-      font-weight: 400;
-      text-align: right;
+    #modal-overlay .task-extra-item[open] summary {
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
     }
 
     #modal-overlay .task-extra-content {
       display: grid;
-      gap: .9rem;
-      padding: 0 1rem 1rem;
+      gap: .75rem;
+      padding: .85rem;
     }
 
     #modal-overlay .task-extra-content .form-group,
@@ -1124,9 +1204,31 @@
       margin-bottom: 0;
     }
 
-    #modal-overlay #m-desc {
-      min-height: 88px;
-      padding: .75rem .85rem;
+    #modal-overlay .task-description-input {
+      width: 100%;
+      min-height: 104px;
+      padding: .85rem .9rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface2);
+      color: var(--text);
+      font: inherit;
+      font-size: .9rem;
+      line-height: 1.5;
+      outline: none;
+      resize: vertical;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    #modal-overlay .task-description-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(82, 121, 111, .12);
+    }
+
+    #modal-overlay .task-extra-content label {
+      color: var(--text);
+      font-size: .82rem;
+      font-weight: 600;
     }
 
     #modal-overlay #subtareas-list {
@@ -2309,12 +2411,19 @@
         padding: .45rem 1.2rem .8rem;
       }
 
+      #modal-overlay .modal-mark {
+        width: 40px;
+        height: 40px;
+        flex-basis: 40px;
+        border-radius: 13px;
+      }
+
       #modal-overlay .modal-header h3 {
         font-size: 1.2rem;
       }
 
       #modal-overlay .modal-subtitle {
-        font-size: .82rem;
+        font-size: .78rem;
       }
 
       #modal-overlay .modal-form {
@@ -2332,12 +2441,13 @@
         background: var(--surface);
       }
 
-      #modal-overlay .task-optional-details summary {
-        padding: .8rem .9rem;
+      #modal-overlay .task-extra-item summary {
+        gap: .65rem;
+        padding: .65rem;
       }
 
       #modal-overlay .task-extra-content {
-        padding: 0 .9rem .9rem;
+        padding: .75rem;
       }
 
       #modal-overlay .err-msg {
@@ -2355,7 +2465,7 @@
     }
 
     @media (max-width: 360px) {
-      #modal-overlay .task-optional-details summary span {
+      #modal-overlay .extra-copy small {
         display: none;
       }
     }
@@ -2634,15 +2744,17 @@
       </div>
       <div class="modal-header">
         <div class="modal-heading">
-          <span class="modal-eyebrow">Planificación personal</span>
-          <h3 id="modal-title">Nueva tarea</h3>
-          <p class="modal-subtitle" id="modal-subtitle">Define lo importante ahora; puedes añadir más detalles después.</p>
+          <span class="modal-mark"><svg class="icon" aria-hidden="true"><use href="#icon-check"></use></svg></span>
+          <div>
+            <h3 id="modal-title">Nueva tarea</h3>
+            <p class="modal-subtitle" id="modal-subtitle">Anota el siguiente paso, sin complicarlo.</p>
+          </div>
         </div>
         <button class="btn-close" onclick="closeModal()" aria-label="Cerrar"><svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg></button>
       </div>
       <div class="modal-form">
         <div class="form-group task-title-group">
-          <label for="m-titulo">Título *</label>
+          <label for="m-titulo">Tarea *</label>
           <input type="text" id="m-titulo" placeholder="¿Qué necesitas hacer?">
         </div>
         <div class="form-row task-core-row">
@@ -2679,24 +2791,47 @@
           </select>
           <small class="form-hint">Se programan las próximas 12 ocurrencias; al completar una se añade otra.</small>
         </div>
-        <details class="task-optional-details">
-          <summary>Más detalles <span>Descripción, compartir y subtareas</span></summary>
-          <div class="task-extra-content">
-            <div class="form-group">
-              <label for="m-desc">Descripción</label>
-              <textarea class="form-group input" id="m-desc" placeholder="Detalles adicionales..." rows="3"></textarea>
+        <div class="task-options-heading">Opcional</div>
+        <div class="task-extra-list">
+          <details class="task-extra-item">
+            <summary>
+              <span class="extra-icon"><svg class="icon" aria-hidden="true"><use href="#icon-clipboard"></use></svg></span>
+              <span class="extra-copy"><strong>Descripción</strong><small>Contexto, notas o información útil</small></span>
+              <svg class="icon extra-chevron" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+            </summary>
+            <div class="task-extra-content">
+              <label for="m-desc">Notas de la tarea</label>
+              <textarea class="task-description-input" id="m-desc" placeholder="Añade aquí los detalles que quieras recordar..." rows="4"></textarea>
             </div>
-            <div class="form-group">
-              <label for="m-compartir">Compartir con (opcional)</label>
-              <input type="text" id="m-compartir" placeholder="Usuario1, Usuario2...">
+          </details>
+          <details class="task-extra-item">
+            <summary>
+              <span class="extra-icon"><svg class="icon" aria-hidden="true"><use href="#icon-share"></use></svg></span>
+              <span class="extra-copy"><strong>Compartir</strong><small>Invita a otras personas a colaborar</small></span>
+              <svg class="icon extra-chevron" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+            </summary>
+            <div class="task-extra-content">
+              <div class="form-group">
+                <label for="m-compartir">Usuarios</label>
+                <input type="text" id="m-compartir" placeholder="Escribe los nombres separados por comas">
+              </div>
             </div>
-            <div class="form-group" id="subtareas-container">
-              <label>Subtareas (opcional)</label>
-              <div id="subtareas-list"></div>
-              <button type="button" class="btn-secondary add-subtask-btn" onclick="addSubtareaInput()"><svg class="icon" aria-hidden="true"><use href="#icon-plus"></use></svg> Añadir paso</button>
+          </details>
+          <details class="task-extra-item">
+            <summary>
+              <span class="extra-icon"><svg class="icon" aria-hidden="true"><use href="#icon-list"></use></svg></span>
+              <span class="extra-copy"><strong>Subtareas</strong><small>Divide el trabajo en pasos pequeños</small></span>
+              <svg class="icon extra-chevron" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+            </summary>
+            <div class="task-extra-content">
+              <div class="form-group" id="subtareas-container">
+                <label>Pasos de la tarea</label>
+                <div id="subtareas-list"></div>
+                <button type="button" class="btn-secondary add-subtask-btn" onclick="addSubtareaInput()"><svg class="icon" aria-hidden="true"><use href="#icon-plus"></use></svg> Añadir paso</button>
+              </div>
             </div>
-          </div>
-        </details>
+          </details>
+        </div>
         <div class="err-msg" id="err-modal"></div>
         <div class="modal-actions">
           <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
@@ -3751,7 +3886,9 @@
       document.getElementById('fecha-row').classList.remove('visible');
       document.getElementById('repeticion-row').style.display = 'none';
       document.getElementById('subtareas-list').innerHTML = '';
-      document.querySelector('#modal-overlay .task-optional-details').open = false;
+      document.querySelectorAll('#modal-overlay .task-extra-item').forEach(section => {
+        section.open = false;
+      });
       document.getElementById('err-modal').classList.remove('visible');
     }
 
