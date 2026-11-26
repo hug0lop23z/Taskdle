@@ -412,6 +412,10 @@
       cursor: pointer;
     }
 
+    .header-view-option[hidden] {
+      display: none;
+    }
+
     .header-view-option:hover {
       background: var(--surface2);
       color: var(--primary);
