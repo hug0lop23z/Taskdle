@@ -2056,6 +2056,10 @@
       pointer-events: none;
     }
 
+    .cal-popover.cal-more-popover {
+      pointer-events: auto;
+    }
+
     .cal-popover strong {
       display: block;
       font-size: .88rem;
@@ -2085,6 +2089,20 @@
       border-left: 3px solid var(--border);
       border-radius: 4px;
       background: var(--surface);
+      cursor: grab;
+      user-select: none;
+    }
+
+    .cal-more-item:hover {
+      background: var(--surface3);
+    }
+
+    .cal-more-item:active {
+      cursor: grabbing;
+    }
+
+    .cal-more-item.dragging {
+      opacity: .4;
     }
 
     .cal-more-item.alta {

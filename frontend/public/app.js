@@ -99,6 +99,7 @@
     let pendingDeadlineWrites = 0;
     let popoverEl = null; // active popover element
     let popoverAnchor = null;
+    let popoverDismissTimer = null;
     let selectedTaskIds = new Set();
     let isSelectMode = false;
     let groups = [];
@@ -1753,6 +1754,7 @@
       );
       if (targetDate.getTime() === currentDate.getTime()) return;
 
+      dismissPopover();
       const previousDeadline = task.fechaLimite;
       taskMutationVersion++;
       pendingDeadlineWrites++;
@@ -1791,7 +1793,7 @@
       }
     }
 
-    function enableCalendarTaskInteractions(element, task) {
+    function enableCalendarTaskInteractions(element, task, showDetails = true) {
       element.draggable = true;
       element.setAttribute('aria-label', `${task.titulo}. Arrastra para cambiar la fecha límite.`);
       element.addEventListener('dragstart', event => {
@@ -1804,11 +1806,16 @@
         draggedTaskId = null;
         element.classList.remove('dragging');
         document.querySelectorAll('.drag-over').forEach(target => target.classList.remove('drag-over'));
+        if (popoverAnchor?.matches('.upcoming-more-count, .cal-more-count')) {
+          schedulePopoverDismiss();
+        }
       });
       enableTouchCalendarDrag(element, task);
       element.addEventListener('click', event => event.stopPropagation());
-      element.addEventListener('mouseenter', event => showPopover(event, task));
-      element.addEventListener('mouseleave', dismissPopover);
+      if (showDetails) {
+        element.addEventListener('mouseenter', event => showPopover(event, task));
+        element.addEventListener('mouseleave', dismissPopover);
+      }
     }
 
     function createCalendarPill(task) {
@@ -1842,10 +1849,13 @@
     function enableMoreTasksPopover(button, tasks) {
       const supportsHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
       button.addEventListener('mouseenter', event => {
-        if (supportsHover) showMoreTasksPopover(tasks, button);
+        if (supportsHover) {
+          cancelPopoverDismiss();
+          showMoreTasksPopover(tasks, button);
+        }
       });
       button.addEventListener('mouseleave', () => {
-        if (supportsHover && popoverAnchor === button) dismissPopover();
+        if (supportsHover && popoverAnchor === button) schedulePopoverDismiss();
       });
       button.addEventListener('click', event => {
         event.stopPropagation();
@@ -1859,6 +1869,8 @@
       dismissPopover();
       const pop = document.createElement('div');
       pop.className = 'cal-popover cal-more-popover';
+      pop.addEventListener('mouseenter', cancelPopoverDismiss);
+      pop.addEventListener('mouseleave', schedulePopoverDismiss);
       const heading = document.createElement('strong');
       heading.textContent = `${tasks.length} tareas más`;
       pop.appendChild(heading);
@@ -1870,6 +1882,7 @@
       tasks.forEach(task => {
         const item = document.createElement('li');
         item.className = `cal-more-item ${String(task.prioridad || '').toLowerCase()}`;
+        item.dataset.taskId = String(task.id);
         const title = document.createElement('span');
         title.className = 'cal-more-task-title';
         title.textContent = task.titulo;
@@ -1881,6 +1894,7 @@
           priorityLabels[task.prioridad] || task.prioridad
         ].filter(Boolean).join(' · ');
         item.append(title, meta);
+        enableCalendarTaskInteractions(item, task, false);
         list.appendChild(item);
       });
       pop.appendChild(list);
@@ -1907,7 +1921,6 @@
       document.body.appendChild(pop);
       popoverEl = pop;
   popoverAnchor = e.currentTarget || e.target;
-
   positionPopover(pop, popoverAnchor);
     }
 
@@ -1925,7 +1938,21 @@
       pop.style.top = top + 'px';
     }
 
+    function schedulePopoverDismiss() {
+      cancelPopoverDismiss();
+      popoverDismissTimer = setTimeout(() => {
+        popoverDismissTimer = null;
+        if (draggedTaskId === null) dismissPopover();
+      }, 180);
+    }
+
+    function cancelPopoverDismiss() {
+      if (popoverDismissTimer !== null) clearTimeout(popoverDismissTimer);
+      popoverDismissTimer = null;
+    }
+
     function dismissPopover() {
+      cancelPopoverDismiss();
       if (popoverEl) { popoverEl.remove(); popoverEl = null; }
       if (popoverAnchor?.matches('.upcoming-more-count, .cal-more-count')) {
         popoverAnchor.setAttribute('aria-expanded', 'false');
