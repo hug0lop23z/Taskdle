@@ -679,10 +679,26 @@
       flex-direction: column;
       align-items: flex-start;
       gap: .16rem;
-      padding: .35rem 0;
-      border-top: 1px solid var(--border);
+      margin-top: .2rem;
+      padding: .35rem .4rem;
+      border-radius: 6px;
       cursor: grab;
       user-select: none;
+    }
+
+    .upcoming-task.alta {
+      background: rgba(183, 107, 103, 0.13);
+      color: var(--danger);
+    }
+
+    .upcoming-task.media {
+      background: rgba(167, 122, 59, 0.14);
+      color: var(--warning);
+    }
+
+    .upcoming-task.baja {
+      background: rgba(84, 128, 108, 0.13);
+      color: var(--success);
     }
 
     .upcoming-task:active {
@@ -704,7 +720,7 @@
     }
 
     .upcoming-task-time {
-      color: var(--primary);
+      color: currentColor;
       font-size: .62rem;
       font-weight: 650;
     }

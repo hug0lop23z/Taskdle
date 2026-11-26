@@ -462,7 +462,7 @@
         const dateLabel = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
         const firstTask = tasks[0];
         const taskList = firstTask
-          ? `<ul class="upcoming-task-list"><li class="upcoming-task${firstTask.estado === 'COMPLETADA' ? ' completed' : ''}" data-task-id="${escHtml(String(firstTask.id))}">
+          ? `<ul class="upcoming-task-list"><li class="upcoming-task ${firstTask.prioridad.toLowerCase()}${firstTask.estado === 'COMPLETADA' ? ' completed' : ''}" data-task-id="${escHtml(String(firstTask.id))}">
                 <span class="upcoming-task-title">${escHtml(firstTask.titulo)}</span>
                 <span class="upcoming-task-meta">
                   <time class="upcoming-task-time">${escHtml(formatDeadlineTime(firstTask.fechaLimite))}</time>
