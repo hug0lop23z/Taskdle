@@ -376,7 +376,6 @@
       const filters = document.getElementById('filters-disclosure');
       filters.hidden = v !== 'list';
       if (filters.hidden) filters.open = false;
-      document.getElementById('view-actions').open = false;
       document.getElementById('upcoming-section').hidden = v === 'calendar';
       document.getElementById('vbtn-list').classList.toggle('active', v === 'list');
       document.getElementById('vbtn-cal').classList.toggle('active', v === 'calendar');
@@ -396,6 +395,7 @@
         rulView.classList.add('visible');
         document.getElementById('ruleta-result').innerHTML = `<div class="empty-state" style="padding:2rem 0">${icon('shuffle', 'empty-icon')}<p>Gira la ruleta para obtener tu próxima tarea.</p></div>`;
       }
+      closeViewActions();
       dismissPopover();
     }
 
