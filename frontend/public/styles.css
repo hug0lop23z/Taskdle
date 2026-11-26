@@ -293,9 +293,10 @@
       background: var(--surface);
       border-bottom: 1px solid var(--border);
       padding: 1rem 1.8rem;
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      gap: .75rem;
       align-items: center;
-      justify-content: space-between;
       position: sticky;
       top: 0;
       z-index: 100;
@@ -303,9 +304,123 @@
     }
 
     .header-left {
+      grid-column: 1;
       display: flex;
+      min-width: 0;
       align-items: center;
       gap: .8rem;
+    }
+
+    .header-right {
+      grid-column: 3;
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      justify-self: end;
+      gap: .5rem;
+    }
+
+    .header-view-menu {
+      position: relative;
+      z-index: 130;
+      grid-column: 2;
+      justify-self: center;
+    }
+
+    .header-view-summary {
+      display: inline-flex;
+      min-height: 40px;
+      align-items: center;
+      justify-content: center;
+      gap: .55rem;
+      padding: .45rem .8rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      color: var(--text);
+      font: inherit;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      list-style: none;
+      white-space: nowrap;
+      transition: background-color .18s ease, border-color .18s ease, color .18s ease;
+    }
+
+    .header-view-summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .header-view-summary:hover,
+    .header-view-menu[open] .header-view-summary {
+      border-color: var(--primary);
+      background: var(--surface2);
+      color: var(--primary);
+    }
+
+    .header-view-summary .icon {
+      width: 16px;
+      height: 16px;
+      color: var(--muted);
+      transition: transform .18s ease;
+    }
+
+    .header-view-menu[open] .header-view-summary .icon {
+      transform: rotate(180deg);
+    }
+
+    .header-view-summary:focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+
+    .header-view-options {
+      position: absolute;
+      top: calc(100% + .5rem);
+      left: 50%;
+      z-index: 130;
+      display: flex;
+      width: max-content;
+      min-width: 170px;
+      flex-direction: column;
+      gap: .25rem;
+      padding: .45rem;
+      transform: translateX(-50%);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .header-view-menu:not([open]) .header-view-options {
+      display: none;
+    }
+
+    .header-view-option {
+      display: flex;
+      min-height: 40px;
+      align-items: center;
+      gap: .55rem;
+      padding: .5rem .65rem;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      font-size: .86rem;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .header-view-option:hover {
+      background: var(--surface2);
+      color: var(--primary);
+    }
+
+    .header-view-option .icon {
+      width: 16px;
+      height: 16px;
+      color: var(--muted);
     }
 
     .header-left .logo {
@@ -2228,10 +2343,22 @@
     @media (max-width: 640px) {
       header {
         padding: .8rem 1rem;
+        gap: .35rem;
       }
 
       header > div:last-child {
         gap: .35rem;
+      }
+
+      .header-left {
+        gap: .45rem;
+      }
+
+      .header-view-summary {
+        min-height: 38px;
+        gap: .35rem;
+        padding: .4rem .55rem;
+        font-size: .82rem;
       }
 
       .user-badge {
@@ -2241,6 +2368,13 @@
 
       .user-menu-dropdown {
         right: 0;
+      }
+
+      .user-badge .name {
+        max-width: 72px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .btn-logout {
@@ -2342,6 +2476,12 @@
 
       .modal {
         padding: 1.25rem;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .user-badge .name {
+        display: none;
       }
     }
 

@@ -149,13 +149,24 @@
   </div>
 
   <!-- ── Dashboard ─────────────────────────────────────────────── -->
-  <div id="dashboard-page">
+  <div id="dashboard-page" data-view="list">
     <header>
       <div class="header-left">
         <img src="./icon.svg" class="logo" alt="Taskdle logo" style="height: 1.6rem;">
         <h2>Taskdle</h2>
       </div>
-      <div style="display:flex;align-items:center;gap:.5rem">
+      <details class="header-view-menu" id="header-view-menu">
+        <summary class="header-view-summary" id="header-view-summary" aria-label="Cambiar vista" title="Cambiar vista">
+          <span id="current-view-label">Lista</span>
+          <svg class="icon" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+        </summary>
+        <div class="header-view-options" role="group" aria-label="Otras vistas">
+          <button class="header-view-option" id="view-option-list" type="button" data-view="list" onclick="showView('list')" hidden><svg class="icon" aria-hidden="true"><use href="#icon-list"></use></svg> Lista</button>
+          <button class="header-view-option" id="view-option-calendar" type="button" data-view="calendar" onclick="showView('calendar')"><svg class="icon" aria-hidden="true"><use href="#icon-calendar"></use></svg> Calendario</button>
+          <button class="header-view-option" id="view-option-roulette" type="button" data-view="ruleta" onclick="showView('ruleta')"><svg class="icon" aria-hidden="true"><use href="#icon-shuffle"></use></svg> Ruleta</button>
+        </div>
+      </details>
+      <div class="header-right">
         <div class="user-menu" id="user-menu">
           <button class="user-badge" id="user-menu-trigger" type="button" aria-expanded="false" aria-controls="user-menu-dropdown" onclick="toggleUserMenu()">
             <span class="avatar" id="user-avatar">U</span>
@@ -197,15 +208,10 @@
       </details>
 
       <details class="view-actions" id="view-actions">
-        <summary class="view-actions-summary dashboard-icon-trigger" aria-label="Abrir vistas y exportación" title="Vistas y exportación">
+        <summary class="view-actions-summary dashboard-icon-trigger" aria-label="Abrir exportación" title="Exportar tareas">
           <svg class="icon" aria-hidden="true"><use href="#icon-more"></use></svg>
         </summary>
         <div class="view-actions-menu">
-          <div class="view-actions-group" role="group" aria-label="Cambiar vista">
-            <button class="view-btn active" id="vbtn-list" onclick="showView('list')"><svg class="icon" aria-hidden="true"><use href="#icon-list"></use></svg> Lista</button>
-            <button class="view-btn" id="vbtn-cal" onclick="showView('calendar')"><svg class="icon" aria-hidden="true"><use href="#icon-calendar"></use></svg> Calendario</button>
-            <button class="view-btn" id="vbtn-ruleta" onclick="showView('ruleta')"><svg class="icon" aria-hidden="true"><use href="#icon-shuffle"></use></svg> Ruleta</button>
-          </div>
           <div class="view-actions-group" role="group" aria-label="Exportar tareas">
             <button class="view-btn" onclick="exportarCSV(); closeViewActions()"><svg class="icon" aria-hidden="true"><use href="#icon-download"></use></svg> CSV</button>
             <button class="view-btn" onclick="exportarPDF(); closeViewActions()"><svg class="icon" aria-hidden="true"><use href="#icon-printer"></use></svg> PDF</button>

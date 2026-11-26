@@ -134,6 +134,8 @@
       if (filters.open && !filters.contains(event.target)) filters.open = false;
       const viewActions = document.getElementById('view-actions');
       if (viewActions.open && !viewActions.contains(event.target)) viewActions.open = false;
+      const headerViewMenu = document.getElementById('header-view-menu');
+      if (headerViewMenu.open && !headerViewMenu.contains(event.target)) headerViewMenu.open = false;
     });
     document.addEventListener('toggle', event => {
       const details = event.target;
@@ -371,16 +373,24 @@
     // ── View Toggle ───────────────────────────────────────────────
     function showView(v) {
       activeView = v;
+      const dashboard = document.getElementById('dashboard-page');
+      dashboard.dataset.view = v;
       const listView = document.getElementById('list-view');
       const calView = document.getElementById('calendar-view');
       const rulView = document.getElementById('ruleta-view');
       const filters = document.getElementById('filters-disclosure');
+      const viewLabels = { list: 'Lista', calendar: 'Calendario', ruleta: 'Ruleta' };
+      document.getElementById('current-view-label').textContent = viewLabels[v];
+      document.querySelectorAll('.header-view-option').forEach(option => {
+        option.hidden = option.dataset.view === v;
+      });
+      document.getElementById('header-view-menu').open = false;
+      const viewActions = document.getElementById('view-actions');
+      viewActions.hidden = v !== 'list';
+      if (viewActions.hidden) viewActions.open = false;
       filters.hidden = v !== 'list';
       if (filters.hidden) filters.open = false;
       document.getElementById('upcoming-section').hidden = v === 'calendar';
-      document.getElementById('vbtn-list').classList.toggle('active', v === 'list');
-      document.getElementById('vbtn-cal').classList.toggle('active', v === 'calendar');
-      document.getElementById('vbtn-ruleta').classList.toggle('active', v === 'ruleta');
       if (v === 'list') {
         listView.style.display = '';
         calView.classList.remove('visible');
@@ -1944,6 +1954,10 @@
       if (e.key === 'Escape' && document.getElementById('view-actions').open) {
         closeViewActions();
         document.querySelector('.view-actions-summary').focus();
+      }
+      if (e.key === 'Escape' && document.getElementById('header-view-menu').open) {
+        document.getElementById('header-view-menu').open = false;
+        document.getElementById('header-view-summary').focus();
       }
       if (e.key === 'Enter') {
         if (document.getElementById('panel-login').style.display !== 'none'
