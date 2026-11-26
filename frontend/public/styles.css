@@ -955,6 +955,12 @@
       background: rgba(183, 107, 103, 0.1);
     }
 
+    .btn-edit:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: rgba(82, 121, 111, 0.1);
+    }
+
     /* Empty state */
     .empty-state {
       grid-column: 1 / -1;

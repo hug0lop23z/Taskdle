@@ -24,6 +24,7 @@ El flujo de Taskdle ayuda a pasar de una nota rápida a un plan que puedes segui
 ## Qué puedes hacer con Taskdle
 
 - **Organizar el trabajo:** crea tareas, añade una descripción y asigna una prioridad y un estado.
+- **Corregir tareas:** edita el título, la descripción, la prioridad, la fecha límite y las subtareas; en una serie recurrente, los cambios afectan a la ocurrencia seleccionada y a las siguientes pendientes.
 - **Dividir tareas grandes:** agrega subtareas y consulta su avance sin perder de vista el objetivo principal.
 - **Planificar con fechas:** establece una fecha y una hora límite; consulta tus tareas en calendario mensual, semanal o diario.
 - **Actuar desde el calendario:** selecciona un día u hora para iniciar una tarea con esa fecha ya preparada.
@@ -214,6 +215,7 @@ USING (
 | `POST` | `/api/registro` | Crear una cuenta |
 | `GET` | `/api/tareas?usuario=...` | Consultar tareas |
 | `POST` | `/api/tareas` | Crear una tarea |
+| `PUT` | `/api/tareas/{id}` | Editar una tarea propia y sus subtareas |
 | `PUT` | `/api/tareas/{id}/fecha` | Cambiar la fecha y hora límite de una tarea propia |
 | `PUT` | `/api/tareas/{id}/estado` | Cambiar el estado |
 | `PUT` | `/api/tareas/{id}/repeticion/detener` | Detener una serie recurrente propia |

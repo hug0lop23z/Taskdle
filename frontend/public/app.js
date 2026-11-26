@@ -100,6 +100,7 @@
     let isSelectMode = false;
     let groups = [];
     let taskBeingShared = null;
+    let editingTaskId = null;
     let draggedTaskId = null;
     const expandedTaskDetails = new Set();
     const renderedTaskSignatures = new Map();
@@ -591,6 +592,8 @@
       const recurrenceAction = t.recurrenciaActiva && t.recurrenciaPuedeDetener
         ? `<button class="btn-delete" onclick="detenerRepeticion(${t.id})" title="Detener repetición" aria-label="Detener repetición">${icon('repeat')}</button>`
         : '';
+      const editAction = t.editable === false ? ''
+        : `<button class="btn-delete btn-edit" onclick="editarTarea(${t.id})" title="Editar tarea" aria-label="Editar tarea">${icon('edit')}</button>`;
 
       return `
   <div class="task-card ${prioClass} ${cardClass}" id="card-${t.id}">
@@ -608,6 +611,7 @@
         <option value="EN_PROGRESO" ${t.estado === 'EN_PROGRESO' ? 'selected' : ''}>${stateLabel.EN_PROGRESO}</option>
         <option value="COMPLETADA"  ${t.estado === 'COMPLETADA' ? 'selected' : ''}>${stateLabel.COMPLETADA}</option>
       </select>
+      ${editAction}
       <button class="btn-delete" onclick="compartirTarea(${t.id})" title="Compartir tarea" aria-label="Compartir tarea" style="border-color: var(--primary); color: var(--primary);">${icon('share')}</button>
       ${recurrenceAction}
       <button class="btn-delete" onclick="eliminarTarea(${t.id})" title="Eliminar tarea" aria-label="Eliminar tarea">${icon('trash')}</button>
@@ -912,7 +916,7 @@
        updateBulkBar();
     }
 
-    function addSubtareaInput() {
+    function addSubtareaInput(value = '') {
       const list = document.getElementById('subtareas-list');
       const div = document.createElement('div');
       div.className = 'subtask-row';
@@ -920,6 +924,7 @@
         <input type="text" class="subtarea-input" placeholder="Ej: Comprar harina">
         <button type="button" class="btn-delete" onclick="this.parentElement.remove()" aria-label="Eliminar paso">${icon('close')}</button>
       `;
+      div.querySelector('input').value = value;
       list.appendChild(div);
       div.querySelector('input').focus();
     }
@@ -1028,6 +1033,16 @@
     // ── Modal ─────────────────────────────────────────────────────
     function openModal() {
       const overlay = document.getElementById('modal-overlay');
+      editingTaskId = null;
+      document.getElementById('modal-title').textContent = 'Nueva tarea';
+      document.getElementById('modal-subtitle').textContent = 'Anota el siguiente paso, sin complicarlo.';
+      document.getElementById('btn-crear').innerHTML = `${icon('check')} Crear tarea`;
+      document.querySelector('#modal-overlay .modal-mark use').setAttribute('href', '#icon-check');
+      document.getElementById('m-tipo').disabled = false;
+      document.getElementById('m-recurrencia').disabled = false;
+      document.getElementById('repeticion-row').style.display =
+        document.getElementById('m-tipo').value === 'FECHA' ? '' : 'none';
+      document.querySelectorAll('#modal-overlay .task-extra-item')[1].hidden = false;
       overlay.classList.add('open');
       document.body.classList.add('task-modal-open');
       overlay.querySelector('.modal').style.transform = '';
@@ -1056,6 +1071,11 @@
       document.getElementById('m-recurrencia').value = '';
       document.getElementById('m-fecha').value = '';
       document.getElementById('m-hora').value = '23:59';
+      document.getElementById('m-tipo').disabled = false;
+      document.getElementById('m-recurrencia').disabled = false;
+      document.getElementById('repeticion-row').style.display = 'none';
+      document.querySelectorAll('#modal-overlay .task-extra-item')[1].hidden = false;
+      editingTaskId = null;
       document.getElementById('fecha-row').classList.remove('visible');
       document.getElementById('repeticion-row').style.display = 'none';
       document.getElementById('subtareas-list').innerHTML = '';
@@ -1063,6 +1083,47 @@
         section.open = false;
       });
       document.getElementById('err-modal').classList.remove('visible');
+    }
+
+    function editarTarea(id) {
+      const task = allTasks.find(item => item.id === id);
+      if (!task || task.editable === false) {
+        toast('Solo el propietario puede editar esta tarea', 'error');
+        return;
+      }
+
+      document.getElementById('m-tipo').value = task.tipo;
+      document.getElementById('m-prio').value = task.prioridad;
+      document.getElementById('m-titulo').value = task.titulo;
+      document.getElementById('m-desc').value = task.descripcion || '';
+      document.getElementById('subtareas-list').innerHTML = '';
+      (task.subtareas || []).forEach(subtarea => addSubtareaInput(subtarea.titulo));
+      document.getElementById('m-compartir').value = '';
+      toggleFecha();
+      if (task.fechaLimite) {
+        const deadline = new Date(task.fechaLimite);
+        const localDeadline = new Date(deadline.getTime() - deadline.getTimezoneOffset() * 60000);
+        document.getElementById('m-fecha').value = localDeadline.toISOString().slice(0, 10);
+        document.getElementById('m-hora').value = localDeadline.toISOString().slice(11, 16);
+      } else {
+        document.getElementById('m-fecha').value = '';
+        document.getElementById('m-hora').value = '23:59';
+      }
+
+      openModal();
+      editingTaskId = id;
+      document.getElementById('modal-title').textContent = 'Editar tarea';
+      document.getElementById('modal-subtitle').textContent = task.recurrenciaSerieId
+        ? 'Los cambios se aplicarán a esta ocurrencia y a las siguientes pendientes.'
+        : 'Corrige los datos y guarda los cambios.';
+      document.getElementById('btn-crear').innerHTML = `${icon('check')} Guardar cambios`;
+      document.querySelector('#modal-overlay .modal-mark use').setAttribute('href', '#icon-edit');
+      document.getElementById('m-recurrencia').value = '';
+      document.getElementById('repeticion-row').style.display = 'none';
+      document.querySelectorAll('#modal-overlay .task-extra-item')[1].hidden = true;
+      document.getElementById('m-tipo').disabled = Boolean(task.recurrenciaSerieId);
+      document.querySelectorAll('#modal-overlay .task-extra-item')[0].open = Boolean(task.descripcion);
+      document.querySelectorAll('#modal-overlay .task-extra-item')[2].open = Boolean(task.subtareas && task.subtareas.length);
     }
 
     function startModalSheetDrag(event) {
@@ -1099,7 +1160,7 @@
       if (tipo !== 'FECHA') document.getElementById('m-recurrencia').value = '';
     }
 
-    async function doCrearTarea() {
+    async function doGuardarTarea() {
       const titulo = document.getElementById('m-titulo').value.trim();
       const desc = document.getElementById('m-desc').value.trim();
       const compartir = document.getElementById('m-compartir').value.trim();
@@ -1129,15 +1190,52 @@
           }
         }
 
-        const res = await apiFetch(API_BASE + '/api/tareas', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
+        const isEditing = editingTaskId !== null;
+        const taskId = editingTaskId;
+        let res;
+        if (isEditing && taskId < 0) {
+          const queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
+          const queuedCreate = queue.find(item => item.id === -taskId && item.url === API_BASE + '/api/tareas');
+          if (!queuedCreate) throw new Error('No se encontró la tarea sin sincronizar');
+          const queuedBody = JSON.parse(queuedCreate.options.body);
+          const queuedChanges = { ...body };
+          delete queuedChanges.compartirCon;
+          Object.assign(queuedBody, queuedChanges);
+          if (tipo !== 'FECHA') {
+            delete queuedBody.fechaLimite;
+            delete queuedBody.frecuenciaRepeticion;
+            delete queuedBody.zonaHoraria;
+          }
+          queuedCreate.options.body = JSON.stringify(queuedBody);
+          localStorage.setItem('offlineQueue', JSON.stringify(queue));
+          if (navigator.onLine) {
+            await syncOfflineTasks();
+            res = { ok: true, json: async () => ({ ok: true }) };
+          } else {
+            res = { ok: true, json: async () => ({ ok: true, offline: true }) };
+          }
+        } else {
+          res = await apiFetch(
+            isEditing
+              ? API_BASE + `/api/tareas/${taskId}`
+              : API_BASE + '/api/tareas',
+            {
+              method: isEditing ? 'PUT' : 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body)
+            }
+          );
+        }
         const data = await res.json();
         if (data.ok) {
           closeModal();
-          if (data.offline) {
+          if (isEditing && data.offline) {
+            actualizarCacheTarea(taskId, body);
+            saveCache();
+            renderUpcomingDays();
+            renderTareas();
+            toast('Cambios guardados para sincronizar', 'success');
+          } else if (!isEditing && data.offline) {
              const subtArr = subtareas ? subtareas.split('|').map(s => ({titulo:s, completada:false})) : [];
              allTasks.unshift({
                 id: data.tempId, titulo, descripcion: desc, tipo, prioridad: prio, estado: 'PENDIENTE',
@@ -1154,17 +1252,70 @@
           } else {
              await loadTareas();
           }
-          toast(frecuenciaRepeticion
-            ? (data.offline ? 'Tarea recurrente guardada para sincronizar' : `Serie creada: ${data.ocurrencias} tareas programadas`)
-            : 'Tarea creada ✓', 'success');
+          if (!isEditing) {
+             toast(frecuenciaRepeticion
+               ? (data.offline ? 'Tarea recurrente guardada para sincronizar' : `Serie creada: ${data.ocurrencias} tareas programadas`)
+               : 'Tarea creada ✓', 'success');
+          } else if (!data.offline) {
+             toast('Cambios guardados', 'success');
+          }
         } else {
-          showErr('err-modal', data.mensaje || 'Error al crear');
+          showErr('err-modal', data.mensaje || (isEditing ? 'No se pudieron guardar los cambios' : 'Error al crear'));
         }
       } catch (e) {
-        showErr('err-modal', 'Error de conexión');
+        showErr('err-modal', e.message || 'Error de conexión');
       }
       btn.disabled = false;
-      btn.textContent = 'Crear tarea';
+      btn.innerHTML = editingTaskId === null
+        ? `${icon('check')} Crear tarea`
+        : `${icon('check')} Guardar cambios`;
+    }
+
+    function actualizarCacheTarea(id, cambios) {
+      const task = allTasks.find(item => item.id === id);
+      if (!task) return;
+      const originalDeadline = task.fechaLimite ? new Date(task.fechaLimite) : null;
+      const newDeadline = cambios.fechaLimite ? new Date(cambios.fechaLimite) : null;
+      const localTimestamp = date => Date.UTC(
+        date.getFullYear(), date.getMonth(), date.getDate(),
+        date.getHours(), date.getMinutes(), date.getSeconds(), date.getMilliseconds()
+      );
+      const shift = originalDeadline && newDeadline
+        ? localTimestamp(newDeadline) - localTimestamp(originalDeadline)
+        : 0;
+      const shiftLocalDate = date => {
+        const shifted = new Date(localTimestamp(date) + shift);
+        return new Date(
+          shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate(),
+          shifted.getUTCHours(), shifted.getUTCMinutes(), shifted.getUTCSeconds(),
+          shifted.getUTCMilliseconds()
+        );
+      };
+      const serieId = task.recurrenciaSerieId;
+      const updates = allTasks.filter(item => item.id === id || (
+        serieId && item.recurrenciaSerieId === serieId
+        && item.recurrenciaIndice >= task.recurrenciaIndice
+        && item.estado !== 'COMPLETADA'
+      ));
+
+      updates.forEach(item => {
+        const dueDate = item.id === id
+          ? newDeadline
+          : item.fechaLimite && shift ? shiftLocalDate(new Date(item.fechaLimite)) : null;
+        item.titulo = cambios.titulo;
+        item.descripcion = cambios.descripcion;
+        item.prioridad = cambios.prioridad;
+        item.tipo = cambios.tipo;
+        item.fechaLimite = dueDate ? dueDate.toISOString() : null;
+        const titles = cambios.subtareas ? cambios.subtareas.split('|').filter(Boolean) : [];
+        const previous = item.subtareas || [];
+        const used = new Set();
+        item.subtareas = titles.map(title => {
+          const matchIndex = previous.findIndex((subtask, index) => !used.has(index) && subtask.titulo === title);
+          if (matchIndex >= 0) used.add(matchIndex);
+          return { titulo: title, completada: matchIndex >= 0 && previous[matchIndex].completada };
+        });
+      });
     }
 
     // ── Calendar ──────────────────────────────────────────────────

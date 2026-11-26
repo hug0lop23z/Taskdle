@@ -8,7 +8,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,7 +41,7 @@ public class GestorUsuarios {
         private final int id;
         private final String propietario;
         private final FrecuenciaRepeticion frecuencia;
-        private final ZonedDateTime inicio;
+        private ZonedDateTime inicio;
         private boolean activa = true;
 
         private SerieMemoria(int id, String propietario, FrecuenciaRepeticion frecuencia, ZonedDateTime inicio) {
@@ -434,6 +436,89 @@ public class GestorUsuarios {
         return false;
     }
 
+    public boolean actualizarTarea(int id, String usuario, Tarea cambios) {
+        if (Database.isAvailable()) return tareaDao.actualizarTarea(id, usuario, cambios);
+        if (usuario == null || !usuario.equals(propietariosTareasMemoria.get(id))) return false;
+
+        List<Tarea> propias = tareasMemoria.get(usuario);
+        if (propias == null) return false;
+        Tarea seleccionada = propias.stream().filter(t -> t.getId() == id).findFirst().orElse(null);
+        if (seleccionada == null) return false;
+
+        Integer serieId = seleccionada.getSerieRecurrenteId();
+        List<Tarea> destinos = new ArrayList<>();
+        Duration desplazamiento = Duration.ZERO;
+        ZoneId zona = null;
+        if (serieId != null) {
+            if (!"FECHA".equals(cambios.getTipoTarea())) return false;
+            SerieMemoria serie = seriesMemoria.get(serieId);
+            if (serie == null || seleccionada.getFechaLimite() == null) return false;
+            zona = serie.inicio.getZone();
+            LocalDateTime fechaAnterior = seleccionada.getFechaLimite().atZone(zona).toLocalDateTime();
+            LocalDateTime fechaNueva = cambios.getFechaLimite().atZone(zona).toLocalDateTime();
+            desplazamiento = Duration.between(fechaAnterior, fechaNueva);
+            destinos.addAll(propias.stream()
+                .filter(t -> serieId.equals(t.getSerieRecurrenteId()))
+                .filter(t -> t.getIndiceRecurrente() != null
+                    && t.getIndiceRecurrente() >= seleccionada.getIndiceRecurrente())
+                .filter(t -> t.getId() == id || t.getEstado() != Estado.COMPLETADA)
+                .toList());
+            if (!desplazamiento.isZero()) {
+                serie.inicio = serie.inicio.toLocalDateTime().plus(desplazamiento).atZone(zona);
+            }
+        } else {
+            destinos.add(seleccionada);
+        }
+
+        for (Tarea destino : destinos) {
+            Instant fecha = cambios.getFechaLimite();
+            if (serieId != null && destino.getId() != id && !desplazamiento.isZero()) {
+                fecha = destino.getFechaLimite().atZone(zona).toLocalDateTime()
+                    .plus(desplazamiento).atZone(zona).toInstant();
+            }
+            Tarea actualizada = crearTareaEditada(destino, cambios, fecha);
+            for (List<Tarea> lista : tareasMemoria.values()) {
+                for (int i = 0; i < lista.size(); i++) {
+                    if (lista.get(i).getId() == destino.getId()) {
+                        lista.set(i, actualizada);
+                    }
+                }
+            }
+        }
+        return !destinos.isEmpty();
+    }
+
+    private Tarea crearTareaEditada(Tarea anterior, Tarea cambios, Instant fechaLimite) {
+        Tarea actualizada = "FECHA".equals(cambios.getTipoTarea())
+            ? new TareaConFechaLimite(cambios.getTitulo(), cambios.getDescripcion(), cambios.getPrioridad(), fechaLimite)
+            : new TareaSimple(cambios.getTitulo(), cambios.getDescripcion(), cambios.getPrioridad());
+        actualizada.setId(anterior.getId());
+        actualizada.setEstado(anterior.getEstado());
+        actualizada.setFechaCreacion(anterior.getFechaCreacion());
+        actualizada.setPropietario(anterior.getPropietario());
+        actualizada.setSerieRecurrenteId(anterior.getSerieRecurrenteId());
+        actualizada.setIndiceRecurrente(anterior.getIndiceRecurrente());
+        actualizada.setFrecuenciaRepeticion(anterior.getFrecuenciaRepeticion());
+        actualizada.setRepeticionActiva(anterior.isRepeticionActiva());
+
+        boolean[] reutilizadas = new boolean[anterior.getSubtareas().size()];
+        for (int indice = 0; indice < cambios.getSubtareas().size(); indice++) {
+            Subtarea nueva = cambios.getSubtareas().get(indice);
+            Subtarea copia = new Subtarea(nueva.getTitulo());
+            copia.setId(indice + 1);
+            for (int i = 0; i < anterior.getSubtareas().size(); i++) {
+                Subtarea previa = anterior.getSubtareas().get(i);
+                if (!reutilizadas[i] && previa.getTitulo().equals(nueva.getTitulo())) {
+                    copia.setCompletada(previa.isCompletada());
+                    reutilizadas[i] = true;
+                    break;
+                }
+            }
+            actualizada.agregarSubtarea(copia);
+        }
+        return actualizada;
+    }
+
     public boolean eliminarTarea(int id, String usuario) {
         if (Database.isAvailable()) {
             try {
@@ -468,22 +553,17 @@ public class GestorUsuarios {
 
     // ─── Subtareas ───────────────────────────────────────────────────────────
 
-    public boolean actualizarSubtarea(int subtareaId, boolean completada) {
+    public boolean actualizarSubtarea(int tareaId, String usuario, int subtareaId, boolean completada) {
         if (Database.isAvailable()) {
-            try {
-                boolean ok = tareaDao.actualizarSubtarea(subtareaId, completada);
-                if (ok) return true;
-            } catch (Exception ignored) {}
+            return tareaDao.actualizarSubtarea(tareaId, usuario, subtareaId, completada);
         }
 
-        for (List<Tarea> lista : tareasMemoria.values()) {
-            for (Tarea t : lista) {
-                for (Subtarea s : t.getSubtareas()) {
-                    if (s.getId() == subtareaId) {
-                        s.setCompletada(completada);
-                        return true;
-                    }
-                }
+        Tarea tarea = buscarTarea(tareaId, usuario);
+        if (tarea == null) return false;
+        for (Subtarea subtarea : tarea.getSubtareas()) {
+            if (subtarea.getId() == subtareaId) {
+                subtarea.setCompletada(completada);
+                return true;
             }
         }
         return false;

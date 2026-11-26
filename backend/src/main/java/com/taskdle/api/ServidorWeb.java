@@ -361,10 +361,16 @@ public class ServidorWeb {
             String subIdStr = extractJson(body, "subtareaId");
 
             try {
-                if (subIdStr != null) {
+                if (nombre == null || subIdStr == null || compStr == null
+                        || !("true".equalsIgnoreCase(compStr) || "false".equalsIgnoreCase(compStr))) {
+                    respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"Datos incompletos\"}");
+                } else {
                     int subtareaId = Integer.parseInt(subIdStr);
                     boolean completada = Boolean.parseBoolean(compStr);
-                    gestor.actualizarSubtarea(subtareaId, completada);
+                    if (!gestor.actualizarSubtarea(id, nombre, subtareaId, completada)) {
+                        respond(ex, 404, "application/json", "{\"ok\":false,\"mensaje\":\"No se encontró la subtarea\"}");
+                        return;
+                    }
                     
                     Tarea t = gestor.buscarTarea(id, nombre);
                     int ocurrenciasCreadas = 0;
@@ -385,8 +391,6 @@ public class ServidorWeb {
                     respond(ex, 200, "application/json",
                         "{\"ok\":true,\"nuevoEstado\":\"" + nuevoEstado + "\"" +
                         ",\"ocurrenciasCreadas\":" + ocurrenciasCreadas + "}");
-                } else {
-                    respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"Se requiere subtareaId\"}");
                 }
             } catch (Exception e) {
                 respond(ex, 500, "application/json", "{\"ok\":false}");
@@ -403,6 +407,52 @@ public class ServidorWeb {
             respond(ex, ok ? 200 : 403, "application/json", ok
                 ? "{\"ok\":true}"
                 : "{\"ok\":false,\"mensaje\":\"No se pudo detener esta repetición\"}");
+            return;
+        }
+
+        // PUT /api/tareas/{id}
+        Matcher mUpdate = Pattern.compile("/api/tareas/(\\d+)").matcher(path);
+        if ("PUT".equals(method) && mUpdate.matches()) {
+            int id = Integer.parseInt(mUpdate.group(1));
+            String body = readBody(ex);
+            String nombre = extractJson(body, "usuario");
+            String tipo = extractJson(body, "tipo");
+            String titulo = extractJson(body, "titulo");
+            String descripcion = extractJson(body, "descripcion");
+            String prioridadStr = extractJson(body, "prioridad");
+            String fechaStr = extractJson(body, "fechaLimite");
+            String subtareasStr = extractJson(body, "subtareas");
+
+            if (nombre == null || titulo == null || titulo.isBlank()
+                    || prioridadStr == null || !("SIMPLE".equals(tipo) || "FECHA".equals(tipo))) {
+                respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"Datos inválidos\"}");
+                return;
+            }
+
+            try {
+                Prioridad prioridad = Prioridad.valueOf(prioridadStr.toUpperCase(Locale.ROOT));
+                Instant fecha = null;
+                if ("FECHA".equals(tipo)) {
+                    if (fechaStr == null) throw new IllegalArgumentException("Falta la fecha límite");
+                    fecha = Instant.parse(fechaStr);
+                }
+
+                Tarea cambios = "FECHA".equals(tipo)
+                    ? new TareaConFechaLimite(titulo, descripcion == null ? "" : descripcion, prioridad, fecha)
+                    : new TareaSimple(titulo, descripcion == null ? "" : descripcion, prioridad);
+                if (subtareasStr != null && !subtareasStr.isBlank()) {
+                    for (String subtarea : subtareasStr.split("\\|")) {
+                        if (!subtarea.trim().isEmpty()) cambios.agregarSubtarea(new Subtarea(subtarea.trim()));
+                    }
+                }
+
+                boolean ok = gestor.actualizarTarea(id, nombre, cambios);
+                respond(ex, ok ? 200 : 403, "application/json", ok
+                    ? "{\"ok\":true}"
+                    : "{\"ok\":false,\"mensaje\":\"No puedes editar esta tarea\"}");
+            } catch (RuntimeException e) {
+                respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"Datos inválidos\"}");
+            }
             return;
         }
 
@@ -502,6 +552,7 @@ public class ServidorWeb {
         sb.append("\"descripcion\":\"").append(esc(t.getDescripcion())).append("\",");
         sb.append("\"prioridad\":\"").append(t.getPrioridad()).append("\",");
         sb.append("\"estado\":\"").append(t.getEstado()).append("\",");
+        sb.append("\"editable\":").append(usuario.equals(t.getPropietario())).append(",");
         sb.append("\"fechaCreacion\":\"").append(t.getFechaCreacion().format(FMT)).append("\",");
         sb.append("\"infoAdicional\":\"").append(esc(t.getInfoAdicional())).append("\"");
         if (t instanceof TareaConFechaLimite tcfl) {

@@ -2,6 +2,7 @@ package com.taskdle.db;
 
 import com.taskdle.model.*;
 import java.sql.*;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -289,6 +290,124 @@ public class TareaDao {
         }
     }
 
+    public boolean actualizarTarea(int id, String usuario, Tarea cambios) {
+        try (Connection c = Database.getConnection()) {
+            c.setAutoCommit(false);
+            try {
+                Integer serieId = null;
+                Integer indice = null;
+                Instant fechaAnterior = null;
+                ZoneId zona = null;
+                try (PreparedStatement ps = c.prepareStatement(
+                        "SELECT t.tipo, t.fecha_limite, t.recurrencia_id, t.indice_recurrencia, tr.zona_horaria " +
+                        "FROM tareas t LEFT JOIN tareas_recurrentes tr ON t.recurrencia_id=tr.id " +
+                        "WHERE t.id=? AND t.dueno=? FOR UPDATE OF t")) {
+                    ps.setInt(1, id);
+                    ps.setString(2, usuario);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (!rs.next()) {
+                            c.rollback();
+                            return false;
+                        }
+                        Timestamp fecha = rs.getTimestamp("fecha_limite");
+                        if (fecha != null) fechaAnterior = fecha.toInstant();
+                        int idSerie = rs.getInt("recurrencia_id");
+                        if (!rs.wasNull()) {
+                            serieId = idSerie;
+                            indice = rs.getInt("indice_recurrencia");
+                            zona = ZoneId.of(rs.getString("zona_horaria"));
+                        }
+                    }
+                }
+
+                if (serieId != null && !"FECHA".equals(cambios.getTipoTarea())) {
+                    c.rollback();
+                    return false;
+                }
+
+                Duration desplazamiento = Duration.ZERO;
+                if (serieId != null && fechaAnterior != null) {
+                    LocalDateTime anteriorLocal = fechaAnterior.atZone(zona).toLocalDateTime();
+                    LocalDateTime nuevaLocal = cambios.getFechaLimite().atZone(zona).toLocalDateTime();
+                    desplazamiento = Duration.between(anteriorLocal, nuevaLocal);
+                }
+
+                List<Integer> ids = new ArrayList<>();
+                List<Instant> fechas = new ArrayList<>();
+                if (serieId == null) {
+                    ids.add(id);
+                    fechas.add(cambios.getFechaLimite());
+                } else {
+                    try (PreparedStatement ps = c.prepareStatement(
+                            "SELECT id, fecha_limite FROM tareas WHERE recurrencia_id=? AND indice_recurrencia>=? " +
+                            "AND (id=? OR estado<>'COMPLETADA') ORDER BY indice_recurrencia FOR UPDATE")) {
+                        ps.setInt(1, serieId);
+                        ps.setInt(2, indice);
+                        ps.setInt(3, id);
+                        try (ResultSet rs = ps.executeQuery()) {
+                            while (rs.next()) {
+                                int tareaId = rs.getInt("id");
+                                Timestamp fecha = rs.getTimestamp("fecha_limite");
+                                Instant nuevaFecha = tareaId == id
+                                    ? cambios.getFechaLimite()
+                                    : fecha.toInstant().atZone(zona).toLocalDateTime()
+                                        .plus(desplazamiento).atZone(zona).toInstant();
+                                ids.add(tareaId);
+                                fechas.add(nuevaFecha);
+                            }
+                        }
+                    }
+                    if (!desplazamiento.isZero()) {
+                        Instant fechaBase;
+                        try (PreparedStatement ps = c.prepareStatement(
+                                "SELECT fecha_base FROM tareas_recurrentes WHERE id=? AND dueno=? FOR UPDATE")) {
+                            ps.setInt(1, serieId);
+                            ps.setString(2, usuario);
+                            try (ResultSet rs = ps.executeQuery()) {
+                                if (!rs.next()) throw new SQLException("No se encontró la serie recurrente");
+                                fechaBase = rs.getTimestamp("fecha_base").toInstant();
+                            }
+                        }
+                        LocalDateTime baseLocal = fechaBase.atZone(zona).toLocalDateTime();
+                        try (PreparedStatement ps = c.prepareStatement(
+                                "UPDATE tareas_recurrentes SET fecha_base=? WHERE id=? AND dueno=?")) {
+                            ps.setTimestamp(1, Timestamp.from(baseLocal.plus(desplazamiento).atZone(zona).toInstant()));
+                            ps.setInt(2, serieId);
+                            ps.setString(3, usuario);
+                            ps.executeUpdate();
+                        }
+                    }
+                }
+
+                for (int i = 0; i < ids.size(); i++) {
+                    try (PreparedStatement ps = c.prepareStatement(
+                            "UPDATE tareas SET tipo=?, titulo=?, descripcion=?, prioridad=?, fecha_limite=? " +
+                            "WHERE id=? AND dueno=?")) {
+                        ps.setString(1, cambios.getTipoTarea());
+                        ps.setString(2, cambios.getTitulo());
+                        ps.setString(3, cambios.getDescripcion());
+                        ps.setString(4, cambios.getPrioridad().name());
+                        if (fechas.get(i) == null) ps.setNull(5, Types.TIMESTAMP_WITH_TIMEZONE);
+                        else ps.setTimestamp(5, Timestamp.from(fechas.get(i)));
+                        ps.setInt(6, ids.get(i));
+                        ps.setString(7, usuario);
+                        if (ps.executeUpdate() == 0) throw new SQLException("No se pudo actualizar la tarea");
+                    }
+                    reemplazarSubtareas(ids.get(i), cambios.getSubtareas(), c);
+                }
+
+                c.commit();
+                return !ids.isEmpty();
+            } catch (SQLException | RuntimeException e) {
+                c.rollback();
+                throw e;
+            }
+        } catch (Exception e) {
+            System.err.println("[TareaDao] actualizarTarea: " + e.getMessage());
+            return false;
+        }
+    }
+
     public boolean eliminar(int id, String usuario) {
         try (Connection c = Database.getConnection()) {
             // Si el usuario era solo un invitado con el que se compartía, quitar el share
@@ -340,6 +459,26 @@ public class TareaDao {
             ps.setInt(4, orden);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) s.setId(rs.getInt(1));
+        }
+    }
+
+    private void reemplazarSubtareas(int tareaId, List<Subtarea> nuevas, Connection c) throws SQLException {
+        List<Subtarea> anteriores = listarSubtareas(tareaId, c);
+        boolean[] reutilizadas = new boolean[anteriores.size()];
+        try (PreparedStatement ps = c.prepareStatement("DELETE FROM subtareas WHERE tarea_id=?")) {
+            ps.setInt(1, tareaId);
+            ps.executeUpdate();
+        }
+        for (int i = 0; i < nuevas.size(); i++) {
+            Subtarea nueva = nuevas.get(i);
+            for (int j = 0; j < anteriores.size(); j++) {
+                if (!reutilizadas[j] && anteriores.get(j).getTitulo().equals(nueva.getTitulo())) {
+                    nueva.setCompletada(anteriores.get(j).isCompletada());
+                    reutilizadas[j] = true;
+                    break;
+                }
+            }
+            insertarSubtarea(nueva, tareaId, i, c);
         }
     }
 
@@ -418,12 +557,18 @@ public class TareaDao {
         }
     }
 
-    public boolean actualizarSubtarea(int subtareaId, boolean completada) {
+    public boolean actualizarSubtarea(int tareaId, String usuario, int subtareaId, boolean completada) {
         try (Connection c = Database.getConnection();
              PreparedStatement ps = c.prepareStatement(
-                 "UPDATE subtareas SET completada=? WHERE id=?")) {
+                 "UPDATE subtareas SET completada=? WHERE id=? AND tarea_id=? AND EXISTS (" +
+                 "SELECT 1 FROM tareas t WHERE t.id=? AND (t.dueno=? OR EXISTS (" +
+                 "SELECT 1 FROM tareas_compartidas tc WHERE tc.tarea_id=t.id AND tc.usuario=?)))")) {
             ps.setBoolean(1, completada);
             ps.setInt(2, subtareaId);
+            ps.setInt(3, tareaId);
+            ps.setInt(4, tareaId);
+            ps.setString(5, usuario);
+            ps.setString(6, usuario);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("[TareaDao] actualizarSubtarea: " + e.getMessage());
