@@ -326,9 +326,8 @@
       display: inline-flex;
       align-items: center;
       gap: .6rem;
-      background: var(--glass);
-      border: 1px solid var(--border);
-      border-radius: 0;
+      background: transparent;
+      border: 0;
       padding: .45rem .9rem;
       color: var(--text);
       font: inherit;
@@ -338,8 +337,7 @@
 
     .user-badge:hover,
     .user-menu.open .user-badge {
-      border-color: var(--primary);
-      background: var(--surface2);
+      background: transparent;
     }
 
     .user-badge:focus-visible {
