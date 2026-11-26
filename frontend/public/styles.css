@@ -600,12 +600,32 @@
       gap: .55rem;
     }
 
+    .upcoming-days.task-dragging {
+      scroll-snap-type: none;
+    }
+
     .upcoming-day {
       min-width: 0;
       padding: .55rem .6rem;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 10px;
+    }
+
+    .upcoming-day[role="button"] {
+      cursor: pointer;
+    }
+
+    .upcoming-day[role="button"]:hover,
+    .upcoming-day[role="button"]:focus-visible {
+      border-color: var(--primary);
+      outline: none;
+    }
+
+    .upcoming-day.drag-over {
+      border-color: var(--primary);
+      background: rgba(82, 121, 111, 0.12);
+      box-shadow: 0 0 0 2px rgba(82, 121, 111, 0.2) inset;
     }
 
     .upcoming-day.today {
@@ -661,6 +681,12 @@
       gap: .16rem;
       padding: .35rem 0;
       border-top: 1px solid var(--border);
+      cursor: grab;
+      user-select: none;
+    }
+
+    .upcoming-task:active {
+      cursor: grabbing;
     }
 
     .upcoming-task-title {
@@ -669,6 +695,18 @@
       font-weight: 600;
       line-height: 1.35;
       overflow-wrap: anywhere;
+    }
+
+    .upcoming-task-meta {
+      display: flex;
+      align-items: center;
+      gap: .35rem;
+    }
+
+    .upcoming-task-time {
+      color: var(--primary);
+      font-size: .62rem;
+      font-weight: 650;
     }
 
     .upcoming-task-state {

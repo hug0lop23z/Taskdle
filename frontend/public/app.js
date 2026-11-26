@@ -462,15 +462,18 @@
         const dateLabel = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
         const firstTask = tasks[0];
         const taskList = firstTask
-          ? `<ul class="upcoming-task-list"><li class="upcoming-task${firstTask.estado === 'COMPLETADA' ? ' completed' : ''}">
+          ? `<ul class="upcoming-task-list"><li class="upcoming-task${firstTask.estado === 'COMPLETADA' ? ' completed' : ''}" data-task-id="${escHtml(String(firstTask.id))}">
                 <span class="upcoming-task-title">${escHtml(firstTask.titulo)}</span>
-                <span class="upcoming-task-state">${escHtml(stateLabels[firstTask.estado] || firstTask.estado)}</span>
+                <span class="upcoming-task-meta">
+                  <time class="upcoming-task-time">${escHtml(formatDeadlineTime(firstTask.fechaLimite))}</time>
+                  <span class="upcoming-task-state">${escHtml(stateLabels[firstTask.estado] || firstTask.estado)}</span>
+                </span>
               </li></ul>
               ${tasks.length > 1 ? `<span class="upcoming-more-count" title="${tasks.length - 1} tareas más" aria-label="${tasks.length - 1} tareas más">+${tasks.length - 1}</span>` : ''}`
           : '<p class="upcoming-empty">Sin tareas</p>';
 
         return `
-          <article class="upcoming-day${offset === 0 ? ' today' : ''}">
+          <article class="upcoming-day${offset === 0 ? ' today' : ''}" data-date="${key}" role="button" tabindex="0" aria-label="Crear tarea para el ${date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}">
             <div class="upcoming-day-header">
               <div>
                 <h4>${weekday}</h4>
@@ -482,6 +485,22 @@
           </article>
         `;
       }).join('');
+
+      const tasksById = new Map(allTasks.map(task => [String(task.id), task]));
+      container.querySelectorAll('.upcoming-day').forEach(day => {
+        const createTaskForDay = () => openModalForDate(day.dataset.date);
+        day.addEventListener('click', createTaskForDay);
+        day.addEventListener('keydown', event => {
+          if (event.target !== day || (event.key !== 'Enter' && event.key !== ' ')) return;
+          event.preventDefault();
+          createTaskForDay();
+        });
+        enableCalendarDrop(day);
+        day.querySelectorAll('.upcoming-task').forEach(element => {
+          const task = tasksById.get(element.dataset.taskId);
+          if (task) enableCalendarTaskInteractions(element, task);
+        });
+      });
     }
 
     function renderTareas() {
@@ -1599,28 +1618,64 @@
 
         const startX = event.clientX;
         const startY = event.clientY;
+        const dayScroller = pill.closest('.upcoming-days');
         let isDragging = false;
         let dropTarget = null;
+        let lastPointer = null;
+        let autoScrollFrame = null;
         const timer = setTimeout(() => {
           isDragging = true;
           draggedTaskId = task.id;
           pill.classList.add('dragging');
+          if (dayScroller) dayScroller.classList.add('task-dragging');
         }, 450);
 
         const clearDropTarget = () => {
           if (dropTarget) dropTarget.classList.remove('drag-over');
           dropTarget = null;
         };
+        const stopAutoScroll = () => {
+          if (autoScrollFrame !== null) cancelAnimationFrame(autoScrollFrame);
+          autoScrollFrame = null;
+        };
+        const updateDropTarget = () => {
+          const target = lastPointer
+            ? document.elementFromPoint(lastPointer.x, lastPointer.y)
+              ?.closest('.cal-cell, .cal-hour-row, .upcoming-day')
+            : null;
+          if (target === dropTarget) return;
+          clearDropTarget();
+          dropTarget = target;
+          if (dropTarget) dropTarget.classList.add('drag-over');
+        };
+        const autoScroll = () => {
+          autoScrollFrame = null;
+          if (!isDragging || !dayScroller || !lastPointer) return;
+          const bounds = dayScroller.getBoundingClientRect();
+          const edge = 40;
+          const maxScroll = dayScroller.scrollWidth - dayScroller.clientWidth;
+          const direction = lastPointer.x <= bounds.left + edge && dayScroller.scrollLeft > 0
+            ? -1
+            : lastPointer.x >= bounds.right - edge && dayScroller.scrollLeft < maxScroll
+              ? 1
+              : 0;
+          if (!direction) return;
+          dayScroller.scrollLeft += direction * 12;
+          updateDropTarget();
+          autoScrollFrame = requestAnimationFrame(autoScroll);
+        };
         const finish = upEvent => {
           clearTimeout(timer);
+          stopAutoScroll();
           document.removeEventListener('pointermove', move);
           document.removeEventListener('pointerup', finish);
           document.removeEventListener('pointercancel', cancel);
           if (isDragging) {
             const target = document.elementFromPoint(upEvent.clientX, upEvent.clientY)
-              ?.closest('.cal-cell, .cal-hour-row');
+              ?.closest('.cal-cell, .cal-hour-row, .upcoming-day');
             clearDropTarget();
             pill.classList.remove('dragging');
+            if (dayScroller) dayScroller.classList.remove('task-dragging');
             draggedTaskId = null;
             if (target) moveTaskDeadline(task.id, target.dataset.date, target.dataset.hour);
             upEvent.preventDefault();
@@ -1628,8 +1683,10 @@
         };
         const cancel = () => {
           clearTimeout(timer);
+          stopAutoScroll();
           clearDropTarget();
           pill.classList.remove('dragging');
+          if (dayScroller) dayScroller.classList.remove('task-dragging');
           draggedTaskId = null;
           document.removeEventListener('pointermove', move);
           document.removeEventListener('pointerup', finish);
@@ -1641,12 +1698,22 @@
             return;
           }
           moveEvent.preventDefault();
-          const target = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY)
-            ?.closest('.cal-cell, .cal-hour-row');
-          if (target === dropTarget) return;
-          clearDropTarget();
-          dropTarget = target;
-          if (dropTarget) dropTarget.classList.add('drag-over');
+          lastPointer = { x: moveEvent.clientX, y: moveEvent.clientY };
+          updateDropTarget();
+          if (dayScroller) {
+            const bounds = dayScroller.getBoundingClientRect();
+            const maxScroll = dayScroller.scrollWidth - dayScroller.clientWidth;
+            const atScrollableEdge = (
+              lastPointer.x <= bounds.left + 40 && dayScroller.scrollLeft > 0
+            ) || (
+              lastPointer.x >= bounds.right - 40 && dayScroller.scrollLeft < maxScroll
+            );
+            if (atScrollableEdge && autoScrollFrame === null) {
+              autoScrollFrame = requestAnimationFrame(autoScroll);
+            } else if (!atScrollableEdge) {
+              stopAutoScroll();
+            }
+          }
         };
 
         document.addEventListener('pointermove', move, { passive: false });
@@ -1712,26 +1779,33 @@
       }
     }
 
+    function enableCalendarTaskInteractions(element, task) {
+      element.draggable = true;
+      element.setAttribute('aria-label', `${task.titulo}. Arrastra para cambiar la fecha límite.`);
+      element.addEventListener('dragstart', event => {
+        draggedTaskId = task.id;
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', String(task.id));
+        element.classList.add('dragging');
+      });
+      element.addEventListener('dragend', () => {
+        draggedTaskId = null;
+        element.classList.remove('dragging');
+        document.querySelectorAll('.drag-over').forEach(target => target.classList.remove('drag-over'));
+      });
+      enableTouchCalendarDrag(element, task);
+      element.addEventListener('click', event => event.stopPropagation());
+      element.addEventListener('mouseenter', event => showPopover(event, task));
+      element.addEventListener('mouseleave', dismissPopover);
+    }
+
     function createCalendarPill(task) {
       const pill = document.createElement('div');
       const prio = task.prioridad.toLowerCase();
       const done = task.estado === 'COMPLETADA';
       pill.className = `cal-pill ${prio}${done ? ' completada' : ''}`;
       pill.title = task.titulo;
-      pill.draggable = true;
-      pill.setAttribute('aria-label', `${task.titulo}. Arrastra para cambiar la fecha límite.`);
-      pill.addEventListener('dragstart', event => {
-        draggedTaskId = task.id;
-        event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/plain', String(task.id));
-        pill.classList.add('dragging');
-      });
-      pill.addEventListener('dragend', () => {
-        draggedTaskId = null;
-        pill.classList.remove('dragging');
-        document.querySelectorAll('.drag-over').forEach(target => target.classList.remove('drag-over'));
-      });
-      enableTouchCalendarDrag(pill, task);
+      enableCalendarTaskInteractions(pill, task);
 
       const title = document.createElement('span');
       title.className = 'cal-pill-title';
@@ -1746,9 +1820,6 @@
         pill.appendChild(timeLabel);
       }
 
-      pill.addEventListener('click', event => event.stopPropagation());
-      pill.addEventListener('mouseenter', event => showPopover(event, task));
-      pill.addEventListener('mouseleave', dismissPopover);
       return pill;
     }
 
