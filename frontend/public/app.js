@@ -131,6 +131,8 @@
       if (menu.classList.contains('open') && !menu.contains(event.target)) toggleUserMenu(true);
       const filters = document.getElementById('filters-disclosure');
       if (filters.open && !filters.contains(event.target)) filters.open = false;
+      const viewActions = document.getElementById('view-actions');
+      if (viewActions.open && !viewActions.contains(event.target)) viewActions.open = false;
     });
     document.addEventListener('toggle', event => {
       const details = event.target;
@@ -371,6 +373,10 @@
       const listView = document.getElementById('list-view');
       const calView = document.getElementById('calendar-view');
       const rulView = document.getElementById('ruleta-view');
+      const filters = document.getElementById('filters-disclosure');
+      filters.hidden = v !== 'list';
+      if (filters.hidden) filters.open = false;
+      document.getElementById('view-actions').open = false;
       document.getElementById('upcoming-section').hidden = v === 'calendar';
       document.getElementById('vbtn-list').classList.toggle('active', v === 'list');
       document.getElementById('vbtn-cal').classList.toggle('active', v === 'calendar');
@@ -391,6 +397,10 @@
         document.getElementById('ruleta-result').innerHTML = `<div class="empty-state" style="padding:2rem 0">${icon('shuffle', 'empty-icon')}<p>Gira la ruleta para obtener tu próxima tarea.</p></div>`;
       }
       dismissPopover();
+    }
+
+    function closeViewActions() {
+      document.getElementById('view-actions').open = false;
     }
 
     function setFilter(btn) {
@@ -1779,6 +1789,10 @@
       if (e.key === 'Escape' && document.getElementById('filters-disclosure').open) {
         document.getElementById('filters-disclosure').open = false;
         document.querySelector('.filters-summary').focus();
+      }
+      if (e.key === 'Escape' && document.getElementById('view-actions').open) {
+        closeViewActions();
+        document.querySelector('.view-actions-summary').focus();
       }
       if (e.key === 'Enter') {
         if (document.getElementById('panel-login').style.display !== 'none'

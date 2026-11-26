@@ -589,7 +589,7 @@
       position: relative;
       z-index: 20;
       width: max-content;
-      margin-bottom: 1.4rem;
+      margin: 0;
     }
 
     .filters {
@@ -616,7 +616,22 @@
       display: none;
     }
 
-    .filters-summary {
+    .dashboard-controls {
+      position: relative;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .6rem 1.8rem .2rem;
+    }
+
+    .view-actions {
+      position: relative;
+      z-index: 20;
+      width: max-content;
+    }
+
+    .dashboard-icon-trigger {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -632,23 +647,24 @@
       transition: background-color .18s ease, border-color .18s ease, color .18s ease;
     }
 
-    .filters-summary::-webkit-details-marker {
+    .dashboard-icon-trigger::-webkit-details-marker {
       display: none;
     }
 
-    .filters-summary .icon {
+    .dashboard-icon-trigger .icon {
       width: 18px;
       height: 18px;
     }
 
-    .filters-summary:hover,
-    .filters-disclosure[open] > .filters-summary {
+    .dashboard-icon-trigger:hover,
+    .filters-disclosure[open] > .dashboard-icon-trigger,
+    .view-actions[open] > .dashboard-icon-trigger {
       border-color: var(--primary);
       background: var(--surface2);
       color: var(--primary);
     }
 
-    .filters-summary:focus-visible {
+    .dashboard-icon-trigger:focus-visible {
       outline: 2px solid var(--primary);
       outline-offset: 2px;
     }
@@ -665,6 +681,37 @@
 
     .bulk-action-bar {
       width: 100%;
+    }
+
+    .view-actions-menu {
+      position: absolute;
+      top: calc(100% + .45rem);
+      right: 0;
+      z-index: 120;
+      display: flex;
+      flex-direction: column;
+      gap: .3rem;
+      width: min(230px, calc(100vw - 2rem));
+      padding: .55rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+    }
+
+    .view-actions:not([open]) .view-actions-menu {
+      display: none;
+    }
+
+    .view-actions-group {
+      display: flex;
+      flex-direction: column;
+      gap: .25rem;
+    }
+
+    .view-actions-group + .view-actions-group {
+      padding-top: .4rem;
+      border-top: 1px solid var(--border);
     }
 
     .filter-btn {
@@ -1432,14 +1479,6 @@
       display: block;
     }
 
-    /* ── View Toggle ───────────────────────────────────────────── */
-    .view-toggle-bar {
-      display: flex;
-      gap: .4rem;
-      padding: .6rem 1.8rem .2rem;
-      justify-content: flex-end;
-    }
-
     .view-btn {
       padding: .4rem .85rem;
       border-radius: 99px;
@@ -1462,6 +1501,16 @@
       border-color: var(--primary);
       color: #fff;
       box-shadow: none;
+    }
+
+    .view-actions-menu .view-btn {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      width: 100%;
+      padding: .6rem .7rem;
+      border-radius: 8px;
+      text-align: left;
     }
 
     /* ── Calendar ──────────────────────────────────────────────── */
@@ -2124,11 +2173,6 @@
       transition: background-color .18s ease, border-color .18s ease, color .18s ease, transform .18s ease;
     }
 
-    .view-toggle-bar {
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
     .task-details-summary {
       list-style: none;
     }
@@ -2215,8 +2259,8 @@
         scroll-snap-align: start;
       }
 
-      .filters-disclosure {
-        margin: .35rem 0 .6rem;
+      .dashboard-controls {
+        padding: .6rem 1rem .2rem;
       }
 
       .task-details-summary {
@@ -2232,46 +2276,6 @@
       .main-content,
       #calendar-view {
         padding: 1rem;
-      }
-
-      .view-toggle-bar {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        padding: .6rem 1rem .2rem;
-        gap: .45rem;
-      }
-
-      .view-toggle-bar .view-btn {
-        width: 100%;
-        margin: 0 !important;
-        padding: .42rem .2rem;
-        font-size: .72rem;
-        white-space: nowrap;
-      }
-
-      .view-toggle-bar .view-btn:nth-child(1) {
-        grid-column: 1;
-        grid-row: 2;
-      }
-
-      .view-toggle-bar .view-btn:nth-child(2) {
-        grid-column: 2;
-        grid-row: 2;
-      }
-
-      .view-toggle-bar .view-btn:nth-child(3) {
-        grid-column: 1;
-        grid-row: 1;
-      }
-
-      .view-toggle-bar .view-btn:nth-child(4) {
-        grid-column: 2;
-        grid-row: 1;
-      }
-
-      .view-toggle-bar .view-btn:nth-child(5) {
-        grid-column: 3;
-        grid-row: 1;
       }
 
       .task-grid {

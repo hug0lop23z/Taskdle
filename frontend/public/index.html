@@ -27,6 +27,7 @@
     <symbol id="icon-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
     <symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></symbol>
     <symbol id="icon-shuffle" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></symbol>
+    <symbol id="icon-more" viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01"/></symbol>
     <symbol id="icon-alert" viewBox="0 0 24 24"><path d="m10.3 3.9-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3.1l-8-14a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4m0 4h.01"/></symbol>
     <symbol id="icon-filter" viewBox="0 0 24 24"><path d="M4 5h16l-6.5 7.5V19l-3 1v-7.5L4 5Z"/></symbol>
     <symbol id="icon-select" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="m8 12 3 3 5-6"/></symbol>
@@ -175,18 +176,9 @@
       <div class="upcoming-days" id="upcoming-days"></div>
     </section>
 
-    <div class="view-toggle-bar">
-      <button class="view-btn" onclick="exportarCSV()" style="margin-right:.4rem;"><svg class="icon" aria-hidden="true"><use href="#icon-download"></use></svg> CSV</button>
-      <button class="view-btn" onclick="exportarPDF()" style="margin-right:auto;"><svg class="icon" aria-hidden="true"><use href="#icon-printer"></use></svg> PDF</button>
-
-      <button class="view-btn active" id="vbtn-list" onclick="showView('list')"><svg class="icon" aria-hidden="true"><use href="#icon-list"></use></svg> Lista</button>
-      <button class="view-btn" id="vbtn-cal" onclick="showView('calendar')"><svg class="icon" aria-hidden="true"><use href="#icon-calendar"></use></svg> Calendario</button>
-      <button class="view-btn" id="vbtn-ruleta" onclick="showView('ruleta')"><svg class="icon" aria-hidden="true"><use href="#icon-shuffle"></use></svg> Ruleta</button>
-    </div>
-
-    <div class="main-content" id="list-view">
+    <div class="dashboard-controls">
       <details class="filters-disclosure" id="filters-disclosure">
-        <summary class="filters-summary" aria-label="Abrir filtros y acciones" title="Filtros">
+        <summary class="filters-summary dashboard-icon-trigger" aria-label="Abrir filtros y acciones" title="Filtros">
           <svg class="icon" aria-hidden="true"><use href="#icon-filter"></use></svg>
         </summary>
         <div class="filters">
@@ -197,12 +189,31 @@
           <button class="filter-btn" data-filter="VENCIDA" onclick="setFilter(this)"><svg class="icon" aria-hidden="true"><use href="#icon-alert"></use></svg> Vencidas</button>
           <button class="filter-btn" id="btn-toggle-select" onclick="toggleSelectMode()"><svg class="icon" aria-hidden="true"><use href="#icon-select"></use></svg> Seleccionar</button>
           <button class="filter-btn" id="btn-select-all" onclick="seleccionarTodas()" style="display: none;"><svg class="icon" aria-hidden="true"><use href="#icon-check"></use></svg> Todas</button>
-
           <div class="bulk-action-bar" id="bulk-action-bar" style="display:none;">
             <button class="btn-bulk-delete" onclick="borrarSeleccionadas()"><svg class="icon" aria-hidden="true"><use href="#icon-trash"></use></svg> Borrar (<span id="bulk-count">0</span>)</button>
           </div>
         </div>
       </details>
+
+      <details class="view-actions" id="view-actions">
+        <summary class="view-actions-summary dashboard-icon-trigger" aria-label="Abrir vistas y exportación" title="Vistas y exportación">
+          <svg class="icon" aria-hidden="true"><use href="#icon-more"></use></svg>
+        </summary>
+        <div class="view-actions-menu">
+          <div class="view-actions-group" role="group" aria-label="Cambiar vista">
+            <button class="view-btn active" id="vbtn-list" onclick="showView('list')"><svg class="icon" aria-hidden="true"><use href="#icon-list"></use></svg> Lista</button>
+            <button class="view-btn" id="vbtn-cal" onclick="showView('calendar')"><svg class="icon" aria-hidden="true"><use href="#icon-calendar"></use></svg> Calendario</button>
+            <button class="view-btn" id="vbtn-ruleta" onclick="showView('ruleta')"><svg class="icon" aria-hidden="true"><use href="#icon-shuffle"></use></svg> Ruleta</button>
+          </div>
+          <div class="view-actions-group" role="group" aria-label="Exportar tareas">
+            <button class="view-btn" onclick="exportarCSV(); closeViewActions()"><svg class="icon" aria-hidden="true"><use href="#icon-download"></use></svg> CSV</button>
+            <button class="view-btn" onclick="exportarPDF(); closeViewActions()"><svg class="icon" aria-hidden="true"><use href="#icon-printer"></use></svg> PDF</button>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="main-content" id="list-view">
       <div class="task-grid" id="task-grid"></div>
     </div>
 
