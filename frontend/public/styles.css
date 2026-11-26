@@ -557,6 +557,16 @@
       font-size: .64rem;
     }
 
+    .upcoming-more-count {
+      display: inline-block;
+      margin-top: .3rem;
+      padding: 0 .2rem;
+      color: var(--muted);
+      font-size: .68rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
     .upcoming-task.completed .upcoming-task-title {
       color: var(--muted);
       text-decoration: line-through;

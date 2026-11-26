@@ -434,13 +434,13 @@
           ? 'Hoy'
           : date.toLocaleDateString('es-ES', { weekday: 'long' });
         const dateLabel = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-        const taskList = tasks.length
-          ? `<ul class="upcoming-task-list">${tasks.map(task => `
-              <li class="upcoming-task${task.estado === 'COMPLETADA' ? ' completed' : ''}">
-                <span class="upcoming-task-title">${escHtml(task.titulo)}</span>
-                <span class="upcoming-task-state">${escHtml(stateLabels[task.estado] || task.estado)}</span>
-              </li>
-            `).join('')}</ul>`
+        const firstTask = tasks[0];
+        const taskList = firstTask
+          ? `<ul class="upcoming-task-list"><li class="upcoming-task${firstTask.estado === 'COMPLETADA' ? ' completed' : ''}">
+                <span class="upcoming-task-title">${escHtml(firstTask.titulo)}</span>
+                <span class="upcoming-task-state">${escHtml(stateLabels[firstTask.estado] || firstTask.estado)}</span>
+              </li></ul>
+              ${tasks.length > 1 ? `<span class="upcoming-more-count" title="${tasks.length - 1} tareas más" aria-label="${tasks.length - 1} tareas más">+${tasks.length - 1}</span>` : ''}`
           : '<p class="upcoming-empty">Sin tareas</p>';
 
         return `
