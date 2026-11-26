@@ -25,13 +25,11 @@
       if (compactMode === lastCompactMode) return;
       lastCompactMode = compactMode;
 
-      document.querySelectorAll('#filters-disclosure, .task-details').forEach(disclosure => {
+      document.querySelectorAll('.task-details').forEach(disclosure => {
         if (!compactMode) {
           disclosure.open = true;
-        } else if (disclosure.matches('.task-details')) {
+        } else {
           disclosure.open = expandedTaskDetails.has(Number(disclosure.dataset.taskId));
-        } else if (!disclosure.dataset.userToggled) {
-          disclosure.open = false;
         }
       });
     }
@@ -131,6 +129,8 @@
     document.addEventListener('click', event => {
       const menu = document.getElementById('user-menu');
       if (menu.classList.contains('open') && !menu.contains(event.target)) toggleUserMenu(true);
+      const filters = document.getElementById('filters-disclosure');
+      if (filters.open && !filters.contains(event.target)) filters.open = false;
     });
     document.addEventListener('toggle', event => {
       const details = event.target;
@@ -393,13 +393,10 @@
     }
 
     function setFilter(btn) {
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.filter-btn[data-filter]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       activeFilter = btn.dataset.filter;
-      document.getElementById('filters-summary-state').textContent = btn.textContent.trim();
-      if (window.matchMedia('(max-width: 640px)').matches) {
-        document.getElementById('filters-disclosure').open = false;
-      }
+      document.getElementById('filters-disclosure').open = false;
       renderTareas();
     }
 
@@ -1777,6 +1774,10 @@
       if (e.key === 'Escape' && document.getElementById('user-menu').classList.contains('open')) {
         toggleUserMenu(true);
         document.getElementById('user-menu-trigger').focus();
+      }
+      if (e.key === 'Escape' && document.getElementById('filters-disclosure').open) {
+        document.getElementById('filters-disclosure').open = false;
+        document.querySelector('.filters-summary').focus();
       }
       if (e.key === 'Enter') {
         if (document.getElementById('panel-login').style.display !== 'none'
