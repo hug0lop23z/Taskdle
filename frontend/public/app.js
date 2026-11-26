@@ -95,6 +95,8 @@
     let calendarDate;
     let calendarMode = 'month';
     let activeView = 'list';
+    let taskMutationVersion = 0;
+    let pendingDeadlineWrites = 0;
     let popoverEl = null; // active popover element
     let selectedTaskIds = new Set();
     let isSelectMode = false;
@@ -261,6 +263,8 @@
     }
 
     async function loadTareas() {
+      if (pendingDeadlineWrites > 0) return;
+      const mutationVersion = taskMutationVersion;
       const cacheKey = 'cachedTasks_' + currentUser;
       if (!navigator.onLine) {
         allTasks = JSON.parse(localStorage.getItem(cacheKey) || '[]');
@@ -292,6 +296,7 @@
         if (!res.ok) throw new Error('La solicitud de tareas no fue exitosa');
         const tasks = await res.json();
         if (!Array.isArray(tasks)) throw new Error('La respuesta de tareas no tiene un formato válido');
+        if (mutationVersion !== taskMutationVersion || pendingDeadlineWrites > 0) return;
         const tasksChanged = JSON.stringify(allTasks) !== JSON.stringify(tasks);
         allTasks = tasks;
         if (!renderedCachedTasks || tasksChanged) {
@@ -321,14 +326,16 @@
     }
 
     async function syncBackground() {
-      if (!currentUser || isSyncing || !navigator.onLine) return;
+      if (!currentUser || isSyncing || pendingDeadlineWrites > 0 || !navigator.onLine) return;
       if (document.hidden) return; // no gastar peticiones si la pestaña está oculta
 
       isSyncing = true;
+      const mutationVersion = taskMutationVersion;
       try {
         const res = await apiFetch(API_BASE + `/api/tareas?usuario=${encodeURIComponent(currentUser)}`);
         if (!res.ok) { isSyncing = false; return; }
         const newTasks = await res.json();
+        if (mutationVersion !== taskMutationVersion || pendingDeadlineWrites > 0) return;
 
         // Comparar con las tareas actuales
         const oldJson = JSON.stringify(allTasks);
@@ -1668,6 +1675,8 @@
       if (targetDate.getTime() === currentDate.getTime()) return;
 
       const previousDeadline = task.fechaLimite;
+      taskMutationVersion++;
+      pendingDeadlineWrites++;
       task.fechaLimite = targetDate.toISOString();
       saveCache();
       renderTaskSnapshot();
@@ -1698,6 +1707,8 @@
         saveCache();
         renderTaskSnapshot();
         toast(e.message || 'No se pudo actualizar la fecha límite', 'error');
+      } finally {
+        pendingDeadlineWrites--;
       }
     }
 
