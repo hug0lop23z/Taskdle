@@ -734,10 +734,27 @@
       display: inline-block;
       margin-top: .3rem;
       padding: 0 .2rem;
+      border: 0;
+      background: transparent;
       color: var(--muted);
+      font: inherit;
       font-size: .62rem;
       font-weight: 700;
       line-height: 1;
+      cursor: pointer;
+    }
+
+    .upcoming-more-count:hover,
+    .cal-more-count:hover {
+      color: var(--primary);
+      text-decoration: underline;
+    }
+
+    .upcoming-more-count:focus-visible,
+    .cal-more-count:focus-visible {
+      color: var(--primary);
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
     }
 
     .upcoming-task.completed .upcoming-task-title {
@@ -1927,11 +1944,15 @@
 
     .cal-more-count {
       align-self: flex-start;
+      padding: 0 .2rem;
+      border: 0;
+      background: transparent;
       color: var(--muted);
+      font: inherit;
       font-size: .68rem;
       font-weight: 700;
       line-height: 1;
-      padding: 0 .2rem;
+      cursor: pointer;
     }
 
     .cal-hour-tasks .cal-pill {
@@ -2049,6 +2070,44 @@
       display: block;
       line-height: 1.6;
       overflow-wrap: anywhere;
+    }
+
+    .cal-more-list {
+      display: grid;
+      gap: .35rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .cal-more-item {
+      padding: .35rem .45rem;
+      border-left: 3px solid var(--border);
+      border-radius: 4px;
+      background: var(--surface);
+    }
+
+    .cal-more-item.alta {
+      border-left-color: var(--danger);
+    }
+
+    .cal-more-item.media {
+      border-left-color: var(--warning);
+    }
+
+    .cal-more-item.baja {
+      border-left-color: var(--success);
+    }
+
+    .cal-popover .cal-more-task-title {
+      color: var(--text);
+      font-size: .78rem;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    .cal-popover .cal-more-task-meta {
+      font-size: .68rem;
     }
 
     /* Loading spinner */

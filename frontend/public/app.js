@@ -98,6 +98,7 @@
     let taskMutationVersion = 0;
     let pendingDeadlineWrites = 0;
     let popoverEl = null; // active popover element
+    let popoverAnchor = null;
     let selectedTaskIds = new Set();
     let isSelectMode = false;
     let groups = [];
@@ -130,6 +131,11 @@
     syncResponsiveDisclosures();
     window.addEventListener('resize', syncResponsiveDisclosures);
     document.addEventListener('click', event => {
+      if (popoverEl && event.target instanceof Element
+        && !popoverEl.contains(event.target)
+        && !event.target.closest('.upcoming-more-count, .cal-more-count')) {
+        dismissPopover();
+      }
       const menu = document.getElementById('user-menu');
       if (menu.classList.contains('open') && !menu.contains(event.target)) toggleUserMenu(true);
       const filters = document.getElementById('filters-disclosure');
@@ -456,6 +462,7 @@
         const tasks = (tasksByDay.get(key) || [])
           .slice()
           .sort((a, b) => parseDeadline(a.fechaLimite) - parseDeadline(b.fechaLimite));
+        tasksByDay.set(key, tasks);
         const weekday = offset === 0
           ? 'Hoy'
           : date.toLocaleDateString('es-ES', { weekday: 'long' });
@@ -469,7 +476,7 @@
                   <span class="upcoming-task-state">${escHtml(stateLabels[firstTask.estado] || firstTask.estado)}</span>
                 </span>
               </li></ul>
-              ${tasks.length > 1 ? `<span class="upcoming-more-count" title="${tasks.length - 1} tareas más" aria-label="${tasks.length - 1} tareas más">+${tasks.length - 1}</span>` : ''}`
+              ${tasks.length > 1 ? `<button class="upcoming-more-count" type="button" title="Mostrar ${tasks.length - 1} tareas más" aria-label="Mostrar ${tasks.length - 1} tareas más" aria-expanded="false">+${tasks.length - 1}</button>` : ''}`
           : '<p class="upcoming-empty">Sin tareas</p>';
 
         return `
@@ -500,6 +507,8 @@
           const task = tasksById.get(element.dataset.taskId);
           if (task) enableCalendarTaskInteractions(element, task);
         });
+        const moreButton = day.querySelector('.upcoming-more-count');
+        if (moreButton) enableMoreTasksPopover(moreButton, tasksByDay.get(day.dataset.date).slice(1));
       });
     }
 
@@ -1544,11 +1553,14 @@
       });
 
       if (compactMonth && tasks.length > 1) {
-        const more = document.createElement('span');
+        const more = document.createElement('button');
         more.className = 'cal-more-count';
+        more.type = 'button';
         more.textContent = `+${tasks.length - 1}`;
-        more.title = `${tasks.length - 1} tareas más`;
-        more.setAttribute('aria-label', `${tasks.length - 1} tareas más`);
+        more.title = `Mostrar ${tasks.length - 1} tareas más`;
+        more.setAttribute('aria-label', `Mostrar ${tasks.length - 1} tareas más`);
+        more.setAttribute('aria-expanded', 'false');
+        enableMoreTasksPopover(more, tasks.slice(1));
         cell.appendChild(more);
       }
 
@@ -1827,6 +1839,58 @@
       return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     }
 
+    function enableMoreTasksPopover(button, tasks) {
+      const supportsHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+      button.addEventListener('mouseenter', event => {
+        if (supportsHover) showMoreTasksPopover(tasks, button);
+      });
+      button.addEventListener('mouseleave', () => {
+        if (supportsHover && popoverAnchor === button) dismissPopover();
+      });
+      button.addEventListener('click', event => {
+        event.stopPropagation();
+        if (supportsHover && event.detail !== 0) return;
+        if (popoverAnchor === button) dismissPopover();
+        else showMoreTasksPopover(tasks, button);
+      });
+    }
+
+    function showMoreTasksPopover(tasks, anchor) {
+      dismissPopover();
+      const pop = document.createElement('div');
+      pop.className = 'cal-popover cal-more-popover';
+      const heading = document.createElement('strong');
+      heading.textContent = `${tasks.length} tareas más`;
+      pop.appendChild(heading);
+
+      const stateLabels = { PENDIENTE: 'Pendiente', EN_PROGRESO: 'En progreso', COMPLETADA: 'Completada' };
+      const priorityLabels = { ALTA: 'Alta', MEDIA: 'Media', BAJA: 'Baja' };
+      const list = document.createElement('ul');
+      list.className = 'cal-more-list';
+      tasks.forEach(task => {
+        const item = document.createElement('li');
+        item.className = `cal-more-item ${String(task.prioridad || '').toLowerCase()}`;
+        const title = document.createElement('span');
+        title.className = 'cal-more-task-title';
+        title.textContent = task.titulo;
+        const meta = document.createElement('span');
+        meta.className = 'cal-more-task-meta';
+        meta.textContent = [
+          formatDeadlineTime(task.fechaLimite),
+          stateLabels[task.estado] || task.estado,
+          priorityLabels[task.prioridad] || task.prioridad
+        ].filter(Boolean).join(' · ');
+        item.append(title, meta);
+        list.appendChild(item);
+      });
+      pop.appendChild(list);
+      document.body.appendChild(pop);
+      popoverEl = pop;
+      popoverAnchor = anchor;
+      anchor.setAttribute('aria-expanded', 'true');
+      positionPopover(pop, anchor);
+    }
+
     function showPopover(e, t) {
       dismissPopover();
       const pop = document.createElement('div');
@@ -1842,8 +1906,13 @@
   `;
       document.body.appendChild(pop);
       popoverEl = pop;
+  popoverAnchor = e.currentTarget || e.target;
 
-      const rect = e.target.getBoundingClientRect();
+  positionPopover(pop, popoverAnchor);
+    }
+
+    function positionPopover(pop, anchor) {
+  const rect = anchor.getBoundingClientRect();
       const margin = 12;
       const maxLeft = Math.max(margin, window.innerWidth - pop.offsetWidth - margin);
       const maxTop = Math.max(margin, window.innerHeight - pop.offsetHeight - margin);
@@ -1858,6 +1927,10 @@
 
     function dismissPopover() {
       if (popoverEl) { popoverEl.remove(); popoverEl = null; }
+      if (popoverAnchor?.matches('.upcoming-more-count, .cal-more-count')) {
+        popoverAnchor.setAttribute('aria-expanded', 'false');
+      }
+      popoverAnchor = null;
     }
 
     // ── Ruleta ───────────────────────────────────────────────────
