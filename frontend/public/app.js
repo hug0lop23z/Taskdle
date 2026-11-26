@@ -25,7 +25,7 @@
       if (compactMode === lastCompactMode) return;
       lastCompactMode = compactMode;
 
-      document.querySelectorAll('#stats-disclosure, #filters-disclosure, .task-details').forEach(disclosure => {
+      document.querySelectorAll('#filters-disclosure, .task-details').forEach(disclosure => {
         if (!compactMode) {
           disclosure.open = true;
         } else if (disclosure.matches('.task-details')) {
@@ -250,7 +250,7 @@
       }
 
       updateBulkBar();
-      renderStats();
+      renderUpcomingDays();
       renderTareas();
       if (activeView === 'calendar') renderCalendar();
     }
@@ -347,7 +347,7 @@
              if (!validIds.has(id)) selectedTaskIds.delete(id);
           }
           updateBulkBar();
-          renderStats();
+          renderUpcomingDays();
           renderTareas();
           if (activeView === 'calendar') renderCalendar();
         }
@@ -403,18 +403,59 @@
       renderTareas();
     }
 
-    function renderStats() {
-      const total = allTasks.length;
-      const pend = allTasks.filter(t => t.estado === 'PENDIENTE').length;
-      const prog = allTasks.filter(t => t.estado === 'EN_PROGRESO').length;
-      const comp = allTasks.filter(t => t.estado === 'COMPLETADA').length;
-      const venc = allTasks.filter(t => t.vencida).length;
-      document.getElementById('stat-total').textContent = total;
-      document.getElementById('stats-summary-count').textContent = `${total} ${total === 1 ? 'tarea' : 'tareas'}`;
-      document.getElementById('stat-pend').textContent = pend;
-      document.getElementById('stat-prog').textContent = prog;
-      document.getElementById('stat-comp').textContent = comp;
-      document.getElementById('stat-venc').textContent = venc;
+    function renderUpcomingDays() {
+      const container = document.getElementById('upcoming-days');
+      const today = new Date();
+      const days = Array.from({ length: 5 }, (_, offset) =>
+        new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset)
+      );
+      const tasksByDay = new Map();
+
+      allTasks.forEach(task => {
+        if (!task.fechaLimite) return;
+        const key = deadlineDateKey(task.fechaLimite);
+        if (!key) return;
+        if (!tasksByDay.has(key)) tasksByDay.set(key, []);
+        tasksByDay.get(key).push(task);
+      });
+
+      const stateLabels = {
+        PENDIENTE: 'Pendiente',
+        EN_PROGRESO: 'En progreso',
+        COMPLETADA: 'Completada'
+      };
+
+      container.innerHTML = days.map((date, offset) => {
+        const key = isoDate(date.getFullYear(), date.getMonth(), date.getDate());
+        const tasks = (tasksByDay.get(key) || [])
+          .slice()
+          .sort((a, b) => parseDeadline(a.fechaLimite) - parseDeadline(b.fechaLimite));
+        const weekday = offset === 0
+          ? 'Hoy'
+          : date.toLocaleDateString('es-ES', { weekday: 'long' });
+        const dateLabel = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+        const taskList = tasks.length
+          ? `<ul class="upcoming-task-list">${tasks.map(task => `
+              <li class="upcoming-task${task.estado === 'COMPLETADA' ? ' completed' : ''}">
+                <span class="upcoming-task-title">${escHtml(task.titulo)}</span>
+                <span class="upcoming-task-state">${escHtml(stateLabels[task.estado] || task.estado)}</span>
+              </li>
+            `).join('')}</ul>`
+          : '<p class="upcoming-empty">Sin tareas</p>';
+
+        return `
+          <article class="upcoming-day${offset === 0 ? ' today' : ''}">
+            <div class="upcoming-day-header">
+              <div>
+                <h4>${weekday}</h4>
+                <time datetime="${key}">${dateLabel}</time>
+              </div>
+              <span class="upcoming-day-count" aria-label="${tasks.length} tareas">${tasks.length}</span>
+            </div>
+            ${taskList}
+          </article>
+        `;
+      }).join('');
     }
 
     function renderTareas() {
@@ -580,7 +621,7 @@
           const t = allTasks.find(x => x.id === id);
           if (t) t.estado = estado;
           saveCache();
-          renderStats();
+          renderUpcomingDays();
           renderTareas();
           if (data.ocurrenciasCreadas === -1) {
              toast('Tarea completada, pero no se pudo programar la siguiente repetición', 'error');
@@ -602,7 +643,7 @@
         if (data.ok) {
           allTasks = allTasks.filter(t => t.id !== id);
           saveCache();
-          renderStats();
+          renderUpcomingDays();
           renderTareas();
           toast('Tarea eliminada', 'success');
         }
@@ -922,7 +963,7 @@
            }
            saveCache();
            exitSelectMode();
-           renderStats();
+           renderUpcomingDays();
            renderTareas();
            toast('Tareas eliminadas', 'success');
        } catch(e) {
@@ -1100,7 +1141,7 @@
                 subtareas: subtArr
              });
              saveCache();
-             renderStats();
+             renderUpcomingDays();
              renderTareas();
           } else {
              await loadTareas();

@@ -169,35 +169,10 @@
       </div>
     </header>
 
-    <details class="stats-disclosure" id="stats-disclosure" open>
-      <summary class="stats-summary" onclick="this.parentElement.dataset.userToggled='true'">
-        <span>Resumen</span>
-        <span class="stats-summary-count" id="stats-summary-count">0 tareas</span>
-        <svg class="icon disclosure-chevron" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
-      </summary>
-      <div class="stats-bar">
-        <div class="stat-card total">
-          <div class="stat-num" id="stat-total">0</div>
-          <div class="stat-label">Total</div>
-        </div>
-        <div class="stat-card pendiente">
-          <div class="stat-num" id="stat-pend">0</div>
-          <div class="stat-label">Pendientes</div>
-        </div>
-        <div class="stat-card progreso">
-          <div class="stat-num" id="stat-prog">0</div>
-          <div class="stat-label">En progreso</div>
-        </div>
-        <div class="stat-card completada">
-          <div class="stat-num" id="stat-comp">0</div>
-          <div class="stat-label">Completadas</div>
-        </div>
-        <div class="stat-card vencida">
-          <div class="stat-num" id="stat-venc">0</div>
-          <div class="stat-label">Vencidas</div>
-        </div>
-      </div>
-    </details>
+    <section class="upcoming-section" aria-labelledby="upcoming-title">
+      <h3 class="upcoming-title" id="upcoming-title">Próximos 5 días</h3>
+      <div class="upcoming-days" id="upcoming-days"></div>
+    </section>
 
     <div class="view-toggle-bar">
       <button class="view-btn" onclick="exportarCSV()" style="margin-right:.4rem;"><svg class="icon" aria-hidden="true"><use href="#icon-download"></use></svg> CSV</button>

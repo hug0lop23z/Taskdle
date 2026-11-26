@@ -35,7 +35,7 @@ El flujo de Taskdle ayuda a pasar de una nota rápida a un plan que puedes segui
 
 ## Una vista clara del trabajo
 
-El panel reúne el resumen de tareas, los filtros y las acciones frecuentes. En cada tarjeta puedes consultar el estado, la prioridad, la fecha límite y, cuando corresponda, el avance de las subtareas.
+En la parte superior, el panel muestra las tareas con fecha límite de hoy y de los próximos cuatro días. En cada tarjeta puedes consultar el estado, la prioridad, la fecha límite y, cuando corresponda, el avance de las subtareas.
 
 ![Panel de tareas de Taskdle con prioridades, estados y subtareas](docs/images/taskdle-escritorio.png)
 
