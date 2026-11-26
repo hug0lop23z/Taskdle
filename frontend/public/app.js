@@ -371,6 +371,7 @@
       const listView = document.getElementById('list-view');
       const calView = document.getElementById('calendar-view');
       const rulView = document.getElementById('ruleta-view');
+      document.getElementById('upcoming-section').hidden = v === 'calendar';
       document.getElementById('vbtn-list').classList.toggle('active', v === 'list');
       document.getElementById('vbtn-cal').classList.toggle('active', v === 'calendar');
       document.getElementById('vbtn-ruleta').classList.toggle('active', v === 'ruleta');
