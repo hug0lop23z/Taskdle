@@ -34,7 +34,6 @@ public class ServidorWeb {
         server.createContext("/api/login",     ServidorWeb::handleLogin);
         server.createContext("/api/registro",  ServidorWeb::handleRegistro);
         server.createContext("/api/tareas",    ServidorWeb::handleTareas);
-        server.createContext("/api/racha",     ServidorWeb::handleRacha);
         server.createContext("/api/db-status", ServidorWeb::handleDbStatus);
         server.createContext("/api/grupos",    ServidorWeb::handleGrupos);
         server.createContext("/health",        ex -> respond(ex, 200, "text/plain", "OK"));
@@ -113,27 +112,6 @@ public class ServidorWeb {
             respond(ex, 200, "application/json", "{\"ok\":false,\"mensaje\":\"El usuario ya existe. Elige otro nombre\"}");
         } else {
             respond(ex, 200, "application/json", "{\"ok\":false,\"mensaje\":\"Error de conexion con la base de datos (verifica DATABASE_URL en Render y que ejecutaste schema.sql en Supabase)\"}");
-        }
-    }
-
-    // ─── Racha ───────────────────────────────────────────────────────────────
-
-    static void handleRacha(HttpExchange ex) throws IOException {
-        corsHeaders(ex);
-        if (preflight(ex)) return;
-
-        if ("GET".equals(ex.getRequestMethod())) {
-            String nombre = queryParam(ex.getRequestURI().getQuery(), "usuario");
-            Usuario u = gestor.getUsuario(nombre);
-            if (u == null) { respond(ex, 404, "application/json", "{}"); return; }
-
-            String json = "{\"rachaViva\":" + u.getRachaViva() +
-                          ",\"rachaActual\":" + u.getRachaActual() +
-                          ",\"mejorRacha\":" + u.getMejorRacha() +
-                          ",\"enPeligro\":" + u.rachaEnPeligro() + "}";
-            respond(ex, 200, "application/json", json);
-        } else {
-            respond(ex, 405, "application/json", "{\"ok\":false}");
         }
     }
 
@@ -361,17 +339,9 @@ public class ServidorWeb {
                 int ocurrenciasCreadas = ok && nuevoEst == Estado.COMPLETADA
                     ? gestor.asegurarOcurrenciasFuturas(id, nombre, 12)
                     : 0;
-                boolean rachaCambio = false;
-                int rachaActual = 0;
-                if (ok && nuevoEst == Estado.COMPLETADA) {
-                    rachaCambio = gestor.registrarCompletacion(nombre);
-                    Usuario u = gestor.getUsuario(nombre);
-                    if (u != null) rachaActual = u.getRachaActual();
-                }
                 if (ok) {
                     respond(ex, 200, "application/json",
-                        "{\"ok\":true,\"rachaCambiada\":" + rachaCambio + ",\"rachaActual\":" + rachaActual +
-                        ",\"ocurrenciasCreadas\":" + ocurrenciasCreadas + "}");
+                        "{\"ok\":true,\"ocurrenciasCreadas\":" + ocurrenciasCreadas + "}");
                 } else {
                     respond(ex, 404, "application/json", "{\"ok\":false}");
                 }
@@ -397,8 +367,6 @@ public class ServidorWeb {
                     gestor.actualizarSubtarea(subtareaId, completada);
                     
                     Tarea t = gestor.buscarTarea(id, nombre);
-                    boolean rachaCambio = false;
-                    int rachaActual = 0;
                     int ocurrenciasCreadas = 0;
                     String nuevoEstado = t != null ? t.getEstado().name() : "PENDIENTE";
                     
@@ -407,9 +375,6 @@ public class ServidorWeb {
                         if (allComplete && t.getEstado() != Estado.COMPLETADA) {
                             gestor.actualizarEstado(id, nombre, Estado.COMPLETADA);
                             ocurrenciasCreadas = gestor.asegurarOcurrenciasFuturas(id, nombre, 12);
-                            rachaCambio = gestor.registrarCompletacion(nombre);
-                            Usuario u = gestor.getUsuario(nombre);
-                            if (u != null) rachaActual = u.getRachaActual();
                             nuevoEstado = Estado.COMPLETADA.name();
                         } else if (!allComplete && t.getEstado() == Estado.COMPLETADA) {
                             gestor.actualizarEstado(id, nombre, Estado.EN_PROGRESO);
@@ -418,9 +383,7 @@ public class ServidorWeb {
                     }
                     
                     respond(ex, 200, "application/json",
-                        "{\"ok\":true,\"rachaCambiada\":" + rachaCambio +
-                        ",\"rachaActual\":" + rachaActual +
-                        ",\"nuevoEstado\":\"" + nuevoEstado + "\"" +
+                        "{\"ok\":true,\"nuevoEstado\":\"" + nuevoEstado + "\"" +
                         ",\"ocurrenciasCreadas\":" + ocurrenciasCreadas + "}");
                 } else {
                     respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"Se requiere subtareaId\"}");

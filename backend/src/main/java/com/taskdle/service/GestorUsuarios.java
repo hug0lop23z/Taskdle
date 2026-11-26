@@ -466,20 +466,6 @@ public class GestorUsuarios {
         return null;
     }
 
-    // ─── Racha ───────────────────────────────────────────────────────────────
-
-    public boolean registrarCompletacion(String nombreUsuario) {
-        Usuario u = getUsuario(nombreUsuario);
-        if (u == null) return false;
-        boolean cambio = u.registrarCompletacion();
-        if (Database.isAvailable()) {
-            try {
-                usuarioDao.actualizarRacha(u);
-            } catch (Exception ignored) {}
-        }
-        return cambio;
-    }
-
     // ─── Subtareas ───────────────────────────────────────────────────────────
 
     public boolean actualizarSubtarea(int subtareaId, boolean completada) {

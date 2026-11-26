@@ -21,7 +21,6 @@
   <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
     <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M20.2 15.4A8.5 8.5 0 0 1 8.6 3.8 8.5 8.5 0 1 0 20.2 15.4Z"/></symbol>
     <symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></symbol>
-    <symbol id="icon-activity" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></symbol>
     <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5m5 5H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></symbol>
     <symbol id="icon-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5 5 5-5m-5 5V3"/></symbol>
     <symbol id="icon-printer" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></symbol>
@@ -162,9 +161,6 @@
           </button>
           <div class="user-menu-dropdown" id="user-menu-dropdown">
             <div class="user-menu-heading" id="user-menu-heading">Usuario</div>
-            <div class="streak-badge" id="streak-badge" style="display:none" title="Racha de tareas">
-              <svg class="icon" aria-hidden="true"><use href="#icon-activity"></use></svg><span id="streak-count">0</span>
-            </div>
             <button class="user-menu-item" id="btn-theme" type="button" onclick="toggleTheme()"><svg class="icon" aria-hidden="true"><use href="#icon-moon"></use></svg><span>Tema</span></button>
             <button class="user-menu-item" type="button" onclick="toggleUserMenu(true); openGroupsModal()"><svg class="icon" aria-hidden="true"><use href="#icon-users"></use></svg><span>Grupos y amigos</span></button>
             <button class="user-menu-item logout" type="button" onclick="doLogout()"><svg class="icon" aria-hidden="true"><use href="#icon-logout"></use></svg><span>Cerrar sesión</span></button>

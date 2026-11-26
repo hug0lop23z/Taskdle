@@ -1,10 +1,7 @@
 -- Taskdle Schema for Supabase PostgreSQL
 CREATE TABLE IF NOT EXISTS usuarios (
     nombre VARCHAR(50) PRIMARY KEY,
-    password_hash VARCHAR(255) NOT NULL,
-    racha_actual INT NOT NULL DEFAULT 0,
-    mejor_racha INT NOT NULL DEFAULT 0,
-    ultima_fecha_completada DATE
+    password_hash VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS tareas_recurrentes (

@@ -31,7 +31,6 @@ El flujo de Taskdle ayuda a pasar de una nota rápida a un plan que puedes segui
 - **Programar tareas recurrentes:** repite una tarea cada día, semana o mes; mantiene 12 ocurrencias programadas y añade otra al completar una.
 - **Colaborar y revisar:** comparte tareas, filtra por estado o vencimiento y gestiona varias tareas a la vez.
 - **Compartir por grupos:** crea grupos como Familia o Trabajo, añade amigos registrados y comparte una tarea con todo el grupo.
-- **Mantener el ritmo:** consulta el resumen de actividad y la racha de tareas completadas.
 - **Llevarte la información:** exporta la lista a CSV o imprime y guarda una copia en PDF.
 
 ## Una vista clara del trabajo
@@ -226,7 +225,6 @@ USING (
 | `POST` | `/api/grupos/{id}/miembros` | Añadir un amigo al grupo |
 | `DELETE` | `/api/grupos/{id}/miembros` | Retirar un amigo del grupo |
 | `POST` | `/api/grupos/{id}/tareas/{tarea}` | Compartir una tarea con todos los miembros |
-| `GET` | `/api/racha?usuario=...` | Consultar la racha |
 | `GET` | `/health` | Comprobar que el backend responde |
 
 ## Estructura del proyecto

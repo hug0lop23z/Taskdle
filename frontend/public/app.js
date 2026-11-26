@@ -62,7 +62,7 @@
            queue.push({ id, url, options });
            localStorage.setItem('offlineQueue', JSON.stringify(queue));
            toast('Registrado sin conexión (se enviará al reconectar)', 'warning');
-           return { ok: true, json: async () => ({ ok: true, offline: true, rachaCambiada: false, rachaActual: 0, tempId: -id }) };
+           return { ok: true, json: async () => ({ ok: true, offline: true, tempId: -id }) };
         }
         return { ok: false, json: async () => ({ ok: false, error: 'Offline' }) };
       }
@@ -239,7 +239,6 @@
       const now = new Date();
       calendarDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       loadTareas();
-      loadRacha();
       loadGroups();
       startAutoSync();
     }
@@ -254,28 +253,6 @@
       renderStats();
       renderTareas();
       if (activeView === 'calendar') renderCalendar();
-    }
-
-    async function loadRacha() {
-      try {
-        const res = await apiFetch(API_BASE + `/api/racha?usuario=${encodeURIComponent(currentUser)}`);
-        const data = await res.json();
-        const badge = document.getElementById('streak-badge');
-        const count = document.getElementById('streak-count');
-        badge.style.display = 'flex';
-        count.textContent = data.rachaViva;
-        
-        badge.className = 'streak-badge';
-        if (data.rachaViva > 0) {
-            badge.className += ' fire';
-        }
-        if (data.enPeligro) {
-            badge.className += ' danger';
-            badge.title = "¡Completa una tarea hoy para no perder tu racha!";
-        } else {
-            badge.title = `Racha actual: ${data.rachaActual} | Mejor racha: ${data.mejorRacha}`;
-        }
-      } catch (e) { console.error('Error al cargar racha'); }
     }
 
     async function loadTareas() {
@@ -607,9 +584,6 @@
           renderTareas();
           if (data.ocurrenciasCreadas === -1) {
              toast('Tarea completada, pero no se pudo programar la siguiente repetición', 'error');
-          } else if (data.rachaCambiada) {
-             toast(`¡Racha aumentada a ${data.rachaActual} días!`, 'success');
-             loadRacha();
           } else {
              toast('Estado actualizado ✓', 'success');
           }
@@ -912,9 +886,6 @@
         if (data.ok) {
            if (data.ocurrenciasCreadas === -1) {
                toast('Paso completado, pero no se pudo programar la siguiente repetición', 'error');
-           } else if (data.rachaCambiada) {
-               toast(`¡Racha aumentada a ${data.rachaActual} días!`, 'success');
-               loadRacha();
            } else if (data.nuevoEstado === 'COMPLETADA') {
                toast('Tarea auto-completada', 'success');
            }
