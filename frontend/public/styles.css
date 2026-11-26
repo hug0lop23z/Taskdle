@@ -629,6 +629,7 @@
       position: relative;
       z-index: 20;
       width: max-content;
+      margin-left: auto;
     }
 
     .dashboard-icon-trigger {
