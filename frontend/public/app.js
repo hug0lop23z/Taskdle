@@ -425,7 +425,7 @@
     function renderUpcomingDays() {
       const container = document.getElementById('upcoming-days');
       const today = new Date();
-      const days = Array.from({ length: 5 }, (_, offset) =>
+      const days = Array.from({ length: 7 }, (_, offset) =>
         new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset)
       );
       const tasksByDay = new Map();

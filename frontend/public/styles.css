@@ -585,27 +585,27 @@
     }
 
     .upcoming-section {
-      padding: 1rem 1.8rem 1.1rem;
+      padding: .7rem 1.8rem .65rem;
     }
 
     .upcoming-title {
-      margin-bottom: .7rem;
-      font-size: .95rem;
+      margin-bottom: .5rem;
+      font-size: .9rem;
       font-weight: 650;
     }
 
     .upcoming-days {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: .7rem;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: .55rem;
     }
 
     .upcoming-day {
       min-width: 0;
-      padding: .75rem;
+      padding: .55rem .6rem;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 10px;
     }
 
     .upcoming-day.today {
@@ -618,30 +618,30 @@
       align-items: center;
       justify-content: space-between;
       gap: .4rem;
-      margin-bottom: .35rem;
+      margin-bottom: .2rem;
     }
 
     .upcoming-day-header h4 {
-      font-size: .82rem;
+      font-size: .77rem;
       font-weight: 650;
       text-transform: capitalize;
     }
 
     .upcoming-day-header time {
       color: var(--muted);
-      font-size: .7rem;
+      font-size: .66rem;
     }
 
     .upcoming-day-count {
       display: grid;
       place-items: center;
-      flex: 0 0 1.45rem;
-      width: 1.45rem;
-      height: 1.45rem;
+      flex: 0 0 1.25rem;
+      width: 1.25rem;
+      height: 1.25rem;
       border-radius: 50%;
       background: var(--surface3);
       color: var(--muted);
-      font-size: .7rem;
+      font-size: .66rem;
       font-weight: 650;
     }
 
@@ -659,21 +659,21 @@
       flex-direction: column;
       align-items: flex-start;
       gap: .16rem;
-      padding: .5rem 0;
+      padding: .35rem 0;
       border-top: 1px solid var(--border);
     }
 
     .upcoming-task-title {
       width: 100%;
-      font-size: .74rem;
-      font-weight: 550;
+      font-size: .76rem;
+      font-weight: 600;
       line-height: 1.35;
       overflow-wrap: anywhere;
     }
 
     .upcoming-task-state {
       color: var(--muted);
-      font-size: .64rem;
+      font-size: .62rem;
     }
 
     .upcoming-more-count {
@@ -692,9 +692,9 @@
     }
 
     .upcoming-empty {
-      padding: .7rem 0 .25rem;
+      padding: .45rem 0 .1rem;
       color: var(--muted);
-      font-size: .73rem;
+      font-size: .68rem;
     }
 
     /* Main content */
@@ -2344,6 +2344,26 @@
       opacity: .65;
     }
 
+    @media (min-width: 641px) and (max-width: 900px) {
+      .upcoming-section {
+        padding: .65rem 1rem;
+      }
+
+      .upcoming-days {
+        display: flex;
+        gap: .5rem;
+        overflow-x: auto;
+        padding-bottom: .3rem;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: thin;
+      }
+
+      .upcoming-day {
+        flex: 0 0 min(24vw, 190px);
+        scroll-snap-align: start;
+      }
+    }
+
     @media (max-width: 640px) {
       header {
         padding: .8rem 1rem;
@@ -2387,20 +2407,20 @@
       }
 
       .upcoming-section {
-        padding: .7rem 1rem .85rem;
+        padding: .55rem 1rem .6rem;
       }
 
       .upcoming-days {
         display: flex;
-        gap: .6rem;
+        gap: .45rem;
         overflow-x: auto;
-        padding-bottom: .35rem;
+        padding-bottom: .3rem;
         scroll-snap-type: x mandatory;
         scrollbar-width: thin;
       }
 
       .upcoming-day {
-        flex: 0 0 min(78vw, 260px);
+        flex: 0 0 min(58vw, 210px);
         scroll-snap-align: start;
       }
 
