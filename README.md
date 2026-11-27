@@ -29,7 +29,6 @@ El flujo de Taskdle ayuda a pasar de una nota rápida a un plan que puedes segui
 - **Planificar con fechas:** establece una fecha y una hora límite sin confundirlas con el bloque de trabajo; programa inicio y fin y consulta tus tareas en calendario mensual, semanal o diario.
 - **Actuar desde el calendario:** selecciona un día u hora para iniciar una tarea con esa fecha ya preparada.
 - **Reorganizar sobre la marcha:** arrastra una tarea a otro día para cambiar su fecha límite; en la vista diaria puedes moverla a otra hora.
-- **Sincronizar con Google Calendar:** envía los bloques planificados al calendario principal de Google; los eventos gestionados por Taskdle se actualizan o retiran al volver a sincronizar.
 - **Programar tareas recurrentes:** repite una tarea cada día, semana o mes; mantiene 12 ocurrencias programadas y añade otra al completar una.
 - **Colaborar y revisar:** comparte tareas, filtra por estado o vencimiento y gestiona varias tareas a la vez.
 - **Compartir por grupos:** crea grupos como Familia o Trabajo, añade amigos registrados y comparte una tarea con todo el grupo.
@@ -208,9 +207,7 @@ USING (
 );
 ```
 
-Las columnas `inicio_planificado` y `fin_planificado` se añaden automáticamente al iniciar el backend mediante `schema.sql`. Para conectar Google Calendar, habilita **Google Calendar API** en Google Cloud, configura la pantalla de consentimiento y crea un cliente OAuth de tipo aplicación web. Añade como origen autorizado el que muestra Taskdle en el diálogo de Google Calendar (por ejemplo, `http://localhost:3000` y el dominio de producción). No introduzcas un secreto de cliente: la aplicación solo necesita el Client ID público.
-
-Desde el menú de usuario, abre **Google Calendar**, introduce el Client ID y pulsa **Guardar y sincronizar**. Tras autorizar el acceso, Taskdle sincroniza en una sola dirección los bloques planificados con el calendario principal. La acción es manual; los eventos creados por Taskdle se actualizan o eliminan en la siguiente sincronización si cambia o desaparece su bloque. No se modifican otros eventos de Google Calendar.
+Las columnas `inicio_planificado` y `fin_planificado` se añaden automáticamente al iniciar el backend mediante `schema.sql`. Los bloques de trabajo se consultan y reorganizan desde el calendario interno de Taskdle.
 
 ## API principal
 

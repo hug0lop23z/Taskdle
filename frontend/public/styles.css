@@ -1528,11 +1528,6 @@
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     }
 
-    .google-calendar-note {
-      margin: 0 0 1rem;
-      line-height: 1.5;
-    }
-
     #modal-overlay .task-description-input {
       width: 100%;
       min-height: 104px;
