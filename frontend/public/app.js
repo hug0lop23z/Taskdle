@@ -19,6 +19,208 @@
       document.getElementById('user-menu-trigger').setAttribute('aria-expanded', isOpen);
     }
 
+    let googleIdentityServicePromise = null;
+
+    function openGoogleCalendarModal() {
+      const button = document.getElementById('google-calendar-sync-btn');
+      button.disabled = true;
+      button.textContent = 'Preparando…';
+      document.getElementById('google-calendar-client-id').value =
+        localStorage.getItem('taskdleGoogleClientId') || '';
+      document.getElementById('google-calendar-origin').textContent = window.location.origin;
+      document.getElementById('google-calendar-error').classList.remove('visible');
+      document.getElementById('google-calendar-modal-overlay').classList.add('open');
+      loadGoogleIdentityServices().then(() => {
+        button.disabled = false;
+        button.textContent = 'Guardar y sincronizar';
+      }).catch(error => {
+        button.disabled = false;
+        button.textContent = 'Guardar y sincronizar';
+        showErr('google-calendar-error', error.message);
+      });
+    }
+
+    function closeGoogleCalendarModal() {
+      document.getElementById('google-calendar-modal-overlay').classList.remove('open');
+    }
+
+    function loadGoogleIdentityServices() {
+      if (window.google?.accounts?.oauth2) return Promise.resolve();
+      if (googleIdentityServicePromise) return googleIdentityServicePromise;
+
+      googleIdentityServicePromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.onload = () => {
+          if (window.google?.accounts?.oauth2) resolve();
+          else {
+            googleIdentityServicePromise = null;
+            reject(new Error('Google Identity Services no está disponible'));
+          }
+        };
+        script.onerror = () => {
+          googleIdentityServicePromise = null;
+          reject(new Error('No se pudo cargar Google Identity Services'));
+        };
+        document.head.appendChild(script);
+      });
+      return googleIdentityServicePromise;
+    }
+
+    function requestGoogleCalendarToken(clientId) {
+      return new Promise((resolve, reject) => {
+        const tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: 'https://www.googleapis.com/auth/calendar.events',
+          callback: response => {
+            if (response.error || !response.access_token) {
+              reject(new Error(response.error_description || response.error || 'Google no autorizó el acceso'));
+              return;
+            }
+            resolve(response.access_token);
+          },
+          error_callback: error => reject(new Error(error.message || 'Se cerró la ventana de autorización'))
+        });
+        tokenClient.requestAccessToken({ prompt: '' });
+      });
+    }
+
+    async function googleCalendarRequest(path, token, options = {}) {
+      const response = await fetch(`https://www.googleapis.com/calendar/v3${path}`, {
+        ...options,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+          ...options.headers
+        }
+      });
+      if (response.status === 204) return null;
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error?.message || `Google Calendar respondió ${response.status}`);
+      }
+      return data;
+    }
+
+    async function listTaskdleGoogleEvents(token) {
+      const events = [];
+      let pageToken = null;
+      do {
+        const params = new URLSearchParams();
+        params.append('privateExtendedProperty', `taskdleUser=${currentUser}`);
+        params.append('privateExtendedProperty', `taskdleOrigin=${window.location.origin}`);
+        params.set('maxResults', '2500');
+        if (pageToken) params.set('pageToken', pageToken);
+        const page = await googleCalendarRequest(`/calendars/primary/events?${params}`, token);
+        events.push(...(page.items || []));
+        pageToken = page.nextPageToken || null;
+      } while (pageToken);
+      return events;
+    }
+
+    async function syncGoogleCalendar() {
+      const button = document.getElementById('google-calendar-sync-btn');
+      const error = document.getElementById('google-calendar-error');
+      const clientId = document.getElementById('google-calendar-client-id').value.trim();
+      error.classList.remove('visible');
+      if (!clientId) {
+        showErr('google-calendar-error', 'Introduce el OAuth Client ID de tu aplicación web de Google.');
+        return;
+      }
+      if (!clientId.endsWith('.apps.googleusercontent.com')) {
+        showErr('google-calendar-error', 'El Client ID no tiene el formato esperado de Google OAuth.');
+        return;
+      }
+      if (!currentUser) {
+        showErr('google-calendar-error', 'Inicia sesión en Taskdle antes de sincronizar.');
+        return;
+      }
+
+      localStorage.setItem('taskdleGoogleClientId', clientId);
+      button.disabled = true;
+      button.textContent = 'Sincronizando…';
+      try {
+        await loadGoogleIdentityServices();
+        const token = await requestGoogleCalendarToken(clientId);
+        const existingEvents = await listTaskdleGoogleEvents(token);
+        const eventsByTaskId = new Map();
+        existingEvents.forEach(event => {
+          const taskId = event.extendedProperties?.private?.taskdleTaskId;
+          if (!taskId) return;
+          if (!eventsByTaskId.has(taskId)) eventsByTaskId.set(taskId, []);
+          eventsByTaskId.get(taskId).push(event);
+        });
+
+        const tasks = allTasks.filter(task =>
+          Number.isInteger(task.id) && task.id > 0 && task.inicioProgramado && task.finProgramado
+        );
+        const scheduledIds = new Set(tasks.map(task => String(task.id)));
+        let created = 0;
+        let updated = 0;
+        let removed = 0;
+
+        for (const task of tasks) {
+          const matching = eventsByTaskId.get(String(task.id)) || [];
+          const event = {
+            summary: task.titulo,
+            description: task.descripcion || '',
+            start: { dateTime: task.inicioProgramado },
+            end: { dateTime: task.finProgramado },
+            extendedProperties: {
+            private: {
+              taskdleUser: currentUser,
+              taskdleOrigin: window.location.origin,
+              taskdleTaskId: String(task.id)
+            }
+            }
+          };
+          if (matching.length) {
+            const [primary, ...duplicates] = matching;
+            await googleCalendarRequest(
+              `/calendars/primary/events/${encodeURIComponent(primary.id)}`,
+              token,
+              { method: 'PATCH', body: JSON.stringify(event) }
+            );
+            updated++;
+            for (const duplicate of duplicates) {
+              await googleCalendarRequest(
+                `/calendars/primary/events/${encodeURIComponent(duplicate.id)}`,
+                token,
+                { method: 'DELETE' }
+              );
+              removed++;
+            }
+          } else {
+            await googleCalendarRequest('/calendars/primary/events', token, {
+              method: 'POST',
+              body: JSON.stringify(event)
+            });
+            created++;
+          }
+          eventsByTaskId.delete(String(task.id));
+        }
+
+        for (const staleEvents of eventsByTaskId.values()) {
+          for (const staleEvent of staleEvents) {
+            await googleCalendarRequest(
+              `/calendars/primary/events/${encodeURIComponent(staleEvent.id)}`,
+              token,
+              { method: 'DELETE' }
+            );
+            removed++;
+          }
+        }
+
+        toast(`Google Calendar actualizado: ${created} creadas, ${updated} actualizadas y ${removed} retiradas.`, 'success');
+      } catch (e) {
+        showErr('google-calendar-error', e.message || 'No se pudo sincronizar con Google Calendar.');
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Guardar y sincronizar';
+      }
+    }
+
     let lastCompactMode = null;
     function syncResponsiveDisclosures() {
       const compactMode = window.matchMedia('(max-width: 640px)').matches;
@@ -106,6 +308,7 @@
     let taskBeingShared = null;
     let editingTaskId = null;
     let draggedTaskId = null;
+    let draggedTaskMoveKind = null;
     const expandedTaskDetails = new Set();
     const renderedTaskSignatures = new Map();
 
@@ -509,7 +712,10 @@
           if (task) enableCalendarTaskInteractions(element, task);
         });
         const moreButton = day.querySelector('.upcoming-more-count');
-        if (moreButton) enableMoreTasksPopover(moreButton, tasksByDay.get(day.dataset.date).slice(1));
+        if (moreButton) {
+          enableMoreTasksPopover(moreButton, tasksByDay.get(day.dataset.date).slice(1)
+            .map(task => ({ task, kind: 'deadline' })));
+        }
       });
     }
 
@@ -584,6 +790,9 @@
         } else {
           metaInfo += `<span class="ok-tag">${icon('check')} Completada · Límite: ${formatDeadline(t.fechaLimite)}</span>`;
         }
+      }
+      if (t.inicioProgramado && t.finProgramado) {
+        metaInfo += `<span>${icon('calendar')} Planificada: ${formatDeadline(t.inicioProgramado)}–${formatDeadlineTime(t.finProgramado)}</span>`;
       }
 
       const stateLabel = { PENDIENTE: 'Pendiente', EN_PROGRESO: 'En progreso', COMPLETADA: 'Completada' };
@@ -1096,12 +1305,21 @@
       document.getElementById('err-modal').classList.remove('visible');
     }
 
-    function openModalForDate(date, time = '23:59') {
-      document.getElementById('m-tipo').value = 'FECHA';
-      document.getElementById('m-fecha').value = date;
-      document.getElementById('m-hora').value = time;
+    function openModalForDate(date, time = '23:59', createPlannedBlock = false) {
+      if (createPlannedBlock) {
+        const start = new Date(`${date}T${time}`);
+        const end = new Date(start.getTime() + 60 * 60 * 1000);
+        document.getElementById('m-tipo').value = 'SIMPLE';
+        document.getElementById('m-inicio-programado').value = toLocalDateTimeInput(start.toISOString());
+        document.getElementById('m-fin-programado').value = toLocalDateTimeInput(end.toISOString());
+      } else {
+        document.getElementById('m-tipo').value = 'FECHA';
+        document.getElementById('m-fecha').value = date;
+        document.getElementById('m-hora').value = time;
+      }
       toggleFecha();
       openModal();
+      document.getElementById('planning-extra-item').open = createPlannedBlock;
     }
 
     function closeModal() {
@@ -1117,6 +1335,8 @@
       document.getElementById('m-recurrencia').value = '';
       document.getElementById('m-fecha').value = '';
       document.getElementById('m-hora').value = '23:59';
+      document.getElementById('m-inicio-programado').value = '';
+      document.getElementById('m-fin-programado').value = '';
       document.getElementById('m-tipo').disabled = false;
       document.getElementById('m-recurrencia').disabled = false;
       document.getElementById('repeticion-row').style.display = 'none';
@@ -1142,6 +1362,8 @@
       document.getElementById('m-prio').value = task.prioridad;
       document.getElementById('m-titulo').value = task.titulo;
       document.getElementById('m-desc').value = task.descripcion || '';
+      document.getElementById('m-inicio-programado').value = toLocalDateTimeInput(task.inicioProgramado);
+      document.getElementById('m-fin-programado').value = toLocalDateTimeInput(task.finProgramado);
       document.getElementById('subtareas-list').innerHTML = '';
       (task.subtareas || []).forEach(subtarea => addSubtareaInput(subtarea.titulo));
       document.getElementById('m-compartir').value = '';
@@ -1160,7 +1382,7 @@
       editingTaskId = id;
       document.getElementById('modal-title').textContent = 'Editar tarea';
       document.getElementById('modal-subtitle').textContent = task.recurrenciaSerieId
-        ? 'Los cambios se aplicarán a esta ocurrencia y a las siguientes pendientes.'
+        ? 'Los datos se aplicarán a las siguientes pendientes; el bloque horario solo a esta ocurrencia.'
         : 'Corrige los datos y guarda los cambios.';
       document.getElementById('btn-crear').innerHTML = `${icon('check')} Guardar cambios`;
       document.querySelector('#modal-overlay .modal-mark use').setAttribute('href', '#icon-edit');
@@ -1170,6 +1392,7 @@
       document.getElementById('m-tipo').disabled = Boolean(task.recurrenciaSerieId);
       document.querySelectorAll('#modal-overlay .task-extra-item')[0].open = Boolean(task.descripcion);
       document.querySelectorAll('#modal-overlay .task-extra-item')[2].open = Boolean(task.subtareas && task.subtareas.length);
+      document.getElementById('planning-extra-item').open = Boolean(task.inicioProgramado || task.finProgramado);
     }
 
     function startModalSheetDrag(event) {
@@ -1214,10 +1437,20 @@
       const prio = document.getElementById('m-prio').value;
       const fecha = document.getElementById('m-fecha').value;
       const hora = document.getElementById('m-hora').value;
+      const inicioProgramado = document.getElementById('m-inicio-programado').value;
+      const finProgramado = document.getElementById('m-fin-programado').value;
       const frecuenciaRepeticion = tipo === 'FECHA' ? document.getElementById('m-recurrencia').value : '';
 
       if (!titulo) { showErr('err-modal', 'El título es obligatorio'); return; }
       if (tipo === 'FECHA' && (!fecha || !hora)) { showErr('err-modal', 'Selecciona la fecha y hora límite'); return; }
+      if (Boolean(inicioProgramado) !== Boolean(finProgramado)) {
+        showErr('err-modal', 'Completa el inicio y el fin del bloque planificado.');
+        return;
+      }
+      if (inicioProgramado && new Date(finProgramado) <= new Date(inicioProgramado)) {
+        showErr('err-modal', 'La hora de fin debe ser posterior al inicio.');
+        return;
+      }
 
       const btn = document.getElementById('btn-crear');
       btn.disabled = true;
@@ -1227,7 +1460,12 @@
         const subtareasInputs = document.querySelectorAll('.subtarea-input');
         const subtareas = Array.from(subtareasInputs).map(i => i.value.trim()).filter(v => v !== '').join('|');
         
-        const body = { usuario: currentUser, tipo, titulo, descripcion: desc, prioridad: prio, compartirCon: compartir, subtareas };
+        const body = {
+          usuario: currentUser, tipo, titulo, descripcion: desc, prioridad: prio,
+          compartirCon: compartir, subtareas,
+          inicioProgramado: inicioProgramado ? new Date(inicioProgramado).toISOString() : null,
+          finProgramado: finProgramado ? new Date(finProgramado).toISOString() : null
+        };
         if (tipo === 'FECHA') {
           body.fechaLimite = new Date(`${fecha}T${hora}`).toISOString();
           if (frecuenciaRepeticion) {
@@ -1287,6 +1525,8 @@
                 id: data.tempId, titulo, descripcion: desc, tipo, prioridad: prio, estado: 'PENDIENTE',
                 fechaCreacion: new Date().toLocaleDateString('es-ES', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}), 
                 fechaLimite: body.fechaLimite || null,
+                inicioProgramado: body.inicioProgramado,
+                finProgramado: body.finProgramado,
                 recurrenciaFrecuencia: frecuenciaRepeticion || null,
                 recurrenciaActiva: Boolean(frecuenciaRepeticion),
                 recurrenciaPuedeDetener: Boolean(frecuenciaRepeticion),
@@ -1353,6 +1593,10 @@
         item.prioridad = cambios.prioridad;
         item.tipo = cambios.tipo;
         item.fechaLimite = dueDate ? dueDate.toISOString() : null;
+        if (item.id === id) {
+          item.inicioProgramado = cambios.inicioProgramado || null;
+          item.finProgramado = cambios.finProgramado || null;
+        }
         const titles = cambios.subtareas ? cambios.subtareas.split('|').filter(Boolean) : [];
         const previous = item.subtareas || [];
         const used = new Set();
@@ -1367,6 +1611,19 @@
     // ── Calendar ──────────────────────────────────────────────────
     const MONTHS_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+    function toLocalDateTimeInput(value) {
+      if (!value) return '';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '';
+      return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    }
+
+    function calendarEntryStart(entry) {
+      return parseDeadline(entry.kind === 'planned'
+        ? entry.task.inicioProgramado
+        : entry.task.fechaLimite);
+    }
 
     function setCalendarMode(mode) {
       calendarMode = mode;
@@ -1445,19 +1702,26 @@
       grid.className = `cal-grid cal-grid-${calendarMode}`;
       weekdays.hidden = calendarMode !== 'month';
 
-      // Build a map: 'YYYY-MM-DD' → [task, ...]
+      // Show planned blocks and keep distinct due dates visible as deadline markers.
       const taskMap = {};
+      const addCalendarEntry = (dateValue, task, kind) => {
+        const dateKey = deadlineDateKey(dateValue);
+        if (!dateKey) return;
+        taskMap[dateKey] = taskMap[dateKey] || [];
+        taskMap[dateKey].push({ task, kind });
+      };
       allTasks.forEach(t => {
-        if (t.fechaLimite) {
-          const dateKey = deadlineDateKey(t.fechaLimite);
-          if (dateKey) {
-            taskMap[dateKey] = taskMap[dateKey] || [];
-            taskMap[dateKey].push(t);
+        if (t.inicioProgramado && t.finProgramado) {
+          addCalendarEntry(t.inicioProgramado, t, 'planned');
+          if (t.fechaLimite && deadlineDateKey(t.fechaLimite) !== deadlineDateKey(t.inicioProgramado)) {
+            addCalendarEntry(t.fechaLimite, t, 'deadline');
           }
+        } else if (t.fechaLimite) {
+          addCalendarEntry(t.fechaLimite, t, 'deadline');
         }
       });
-      Object.values(taskMap).forEach(tasks => {
-        tasks.sort((a, b) => parseDeadline(a.fechaLimite) - parseDeadline(b.fechaLimite));
+      Object.values(taskMap).forEach(entries => {
+        entries.sort((a, b) => calendarEntryStart(a) - calendarEntryStart(b));
       });
 
       const today = new Date();
@@ -1519,12 +1783,12 @@
 
     function appendCalendarDay(grid, date, taskMap, todayStr, otherMonth, showWeekday = false) {
       const dateStr = isoDate(date.getFullYear(), date.getMonth(), date.getDate());
-      const tasks = taskMap[dateStr] || [];
+      const entries = taskMap[dateStr] || [];
       const cell = document.createElement('div');
       cell.className = 'cal-cell'
         + (otherMonth ? ' other-month' : '')
         + (dateStr === todayStr ? ' today' : '')
-        + (tasks.length ? ' has-tasks' : '');
+        + (entries.length ? ' has-tasks' : '');
       cell.dataset.date = dateStr;
       cell.setAttribute('role', 'button');
       cell.tabIndex = 0;
@@ -1548,20 +1812,20 @@
       cell.appendChild(numEl);
 
       const compactMonth = calendarMode === 'month';
-      const visibleTasks = compactMonth ? tasks.slice(0, 1) : tasks;
-      visibleTasks.forEach(t => {
-        cell.appendChild(createCalendarPill(t));
+      const visibleEntries = compactMonth ? entries.slice(0, 1) : entries;
+      visibleEntries.forEach(entry => {
+        cell.appendChild(createCalendarPill(entry));
       });
 
-      if (compactMonth && tasks.length > 1) {
+      if (compactMonth && entries.length > 1) {
         const more = document.createElement('button');
         more.className = 'cal-more-count';
         more.type = 'button';
-        more.textContent = `+${tasks.length - 1}`;
-        more.title = `Mostrar ${tasks.length - 1} tareas más`;
-        more.setAttribute('aria-label', `Mostrar ${tasks.length - 1} tareas más`);
+        more.textContent = `+${entries.length - 1}`;
+        more.title = `Mostrar ${entries.length - 1} tareas más`;
+        more.setAttribute('aria-label', `Mostrar ${entries.length - 1} tareas más`);
         more.setAttribute('aria-expanded', 'false');
-        enableMoreTasksPopover(more, tasks.slice(1));
+        enableMoreTasksPopover(more, entries.slice(1));
         cell.appendChild(more);
       }
 
@@ -1572,7 +1836,7 @@
       const dateKey = isoDate(date.getFullYear(), date.getMonth(), date.getDate());
       const timeline = document.createElement('div');
       timeline.className = 'cal-day-timeline';
-      const tasks = taskMap[dateKey] || [];
+      const entries = taskMap[dateKey] || [];
 
       for (let hour = 0; hour < 24; hour++) {
         const hourText = `${String(hour).padStart(2, '0')}:00`;
@@ -1583,11 +1847,11 @@
         row.setAttribute('role', 'button');
         row.tabIndex = 0;
         row.setAttribute('aria-label', `Crear tarea el ${date.toLocaleDateString('es-ES')} a las ${hourText}`);
-        row.addEventListener('click', () => openModalForDate(dateKey, hourText));
+        row.addEventListener('click', () => openModalForDate(dateKey, hourText, true));
         row.addEventListener('keydown', event => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            openModalForDate(dateKey, hourText);
+            openModalForDate(dateKey, hourText, true);
           }
         });
         enableCalendarDrop(row);
@@ -1599,8 +1863,8 @@
 
         const taskContainer = document.createElement('div');
         taskContainer.className = 'cal-hour-tasks';
-        tasks.filter(task => parseDeadline(task.fechaLimite).getHours() === hour)
-          .forEach(task => taskContainer.appendChild(createCalendarPill(task)));
+        entries.filter(entry => calendarEntryStart(entry)?.getHours() === hour)
+          .forEach(entry => taskContainer.appendChild(createCalendarPill(entry)));
         row.appendChild(taskContainer);
         timeline.appendChild(row);
       }
@@ -1621,11 +1885,16 @@
         event.preventDefault();
         target.classList.remove('drag-over');
         const taskId = Number(event.dataTransfer.getData('text/plain')) || draggedTaskId;
-        moveTaskDeadline(taskId, target.dataset.date, target.dataset.hour);
+        moveTaskDeadline(
+          taskId,
+          target.dataset.date,
+          target.dataset.hour,
+          !target.classList.contains('upcoming-day') && draggedTaskMoveKind === 'planned'
+        );
       });
     }
 
-    function enableTouchCalendarDrag(pill, task) {
+    function enableTouchCalendarDrag(pill, task, moveKind) {
       pill.addEventListener('pointerdown', event => {
         if (event.pointerType !== 'touch') return;
 
@@ -1639,6 +1908,7 @@
         const timer = setTimeout(() => {
           isDragging = true;
           draggedTaskId = task.id;
+          draggedTaskMoveKind = moveKind;
           pill.classList.add('dragging');
           if (dayScroller) dayScroller.classList.add('task-dragging');
         }, 450);
@@ -1690,7 +1960,15 @@
             pill.classList.remove('dragging');
             if (dayScroller) dayScroller.classList.remove('task-dragging');
             draggedTaskId = null;
-            if (target) moveTaskDeadline(task.id, target.dataset.date, target.dataset.hour);
+            draggedTaskMoveKind = null;
+            if (target) {
+              moveTaskDeadline(
+                task.id,
+                target.dataset.date,
+                target.dataset.hour,
+                !target.classList.contains('upcoming-day') && moveKind === 'planned'
+              );
+            }
             upEvent.preventDefault();
           }
         };
@@ -1701,6 +1979,7 @@
           pill.classList.remove('dragging');
           if (dayScroller) dayScroller.classList.remove('task-dragging');
           draggedTaskId = null;
+          draggedTaskMoveKind = null;
           document.removeEventListener('pointermove', move);
           document.removeEventListener('pointerup', finish);
           document.removeEventListener('pointercancel', cancel);
@@ -1735,12 +2014,21 @@
       });
     }
 
-    async function moveTaskDeadline(taskId, dateKey, hour) {
+    async function moveTaskDeadline(taskId, dateKey, hour, movePlannedBlock = true) {
       if (!dateKey) return;
       const task = allTasks.find(item => item.id === taskId);
-      if (!task || !task.fechaLimite) return;
-      const currentDate = parseDeadline(task.fechaLimite);
+      if (!task) return;
+      const hasPlannedBlock = movePlannedBlock && task.inicioProgramado && task.finProgramado;
+      const currentValue = hasPlannedBlock ? task.inicioProgramado : task.fechaLimite;
+      if (!currentValue) return;
+      const currentDate = parseDeadline(currentValue);
       if (!currentDate) return;
+      const previousDeadline = task.fechaLimite;
+      const previousStart = task.inicioProgramado;
+      const previousEnd = task.finProgramado;
+      const duration = hasPlannedBlock
+        ? new Date(task.finProgramado).getTime() - currentDate.getTime()
+        : 0;
 
       const [year, month, day] = dateKey.split('-').map(Number);
       const targetDate = new Date(
@@ -1755,10 +2043,14 @@
       if (targetDate.getTime() === currentDate.getTime()) return;
 
       dismissPopover();
-      const previousDeadline = task.fechaLimite;
       taskMutationVersion++;
       pendingDeadlineWrites++;
-      task.fechaLimite = targetDate.toISOString();
+      if (hasPlannedBlock) {
+        task.inicioProgramado = targetDate.toISOString();
+        task.finProgramado = new Date(targetDate.getTime() + duration).toISOString();
+      } else {
+        task.fechaLimite = targetDate.toISOString();
+      }
       saveCache();
       renderTaskSnapshot();
 
@@ -1768,49 +2060,65 @@
           const queuedCreate = queue.find(item => item.id === -taskId && item.url === API_BASE + '/api/tareas');
           if (!queuedCreate) throw new Error('No se pudo encontrar la tarea pendiente de sincronización');
           const queuedBody = JSON.parse(queuedCreate.options.body);
-          queuedBody.fechaLimite = task.fechaLimite;
+          if (hasPlannedBlock) {
+            queuedBody.inicioProgramado = task.inicioProgramado;
+            queuedBody.finProgramado = task.finProgramado;
+          } else {
+            queuedBody.fechaLimite = task.fechaLimite;
+          }
           queuedCreate.options.body = JSON.stringify(queuedBody);
           localStorage.setItem('offlineQueue', JSON.stringify(queue));
-          toast('Fecha actualizada; la tarea se sincronizará al reconectar', 'success');
+          toast(hasPlannedBlock
+            ? 'Bloque actualizado; se sincronizará al reconectar'
+            : 'Fecha límite actualizada; se sincronizará al reconectar', 'success');
           return;
         }
 
-        const res = await apiFetch(API_BASE + `/api/tareas/${taskId}/fecha`, {
+        const res = await apiFetch(API_BASE + `/api/tareas/${taskId}/${hasPlannedBlock ? 'planificacion' : 'fecha'}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ usuario: currentUser, fechaLimite: task.fechaLimite })
+          body: JSON.stringify(hasPlannedBlock
+            ? { usuario: currentUser, inicioProgramado: task.inicioProgramado, finProgramado: task.finProgramado }
+            : { usuario: currentUser, fechaLimite: task.fechaLimite })
         });
         const data = await res.json();
-        if (!res.ok || !data.ok) throw new Error(data.mensaje || 'No se pudo actualizar la fecha');
-        toast(data.offline ? 'Cambio guardado; se sincronizará al reconectar' : 'Fecha límite actualizada', 'success');
+        if (!res.ok || !data.ok) throw new Error(data.mensaje || 'No se pudo actualizar la planificación');
+        toast(data.offline ? 'Cambio guardado; se sincronizará al reconectar'
+          : hasPlannedBlock ? 'Bloque horario actualizado' : 'Fecha límite actualizada', 'success');
       } catch (e) {
         task.fechaLimite = previousDeadline;
+        task.inicioProgramado = previousStart;
+        task.finProgramado = previousEnd;
         saveCache();
         renderTaskSnapshot();
-        toast(e.message || 'No se pudo actualizar la fecha límite', 'error');
+        toast(e.message || 'No se pudo actualizar la planificación', 'error');
       } finally {
         pendingDeadlineWrites--;
       }
     }
 
-    function enableCalendarTaskInteractions(element, task, showDetails = true) {
+    function enableCalendarTaskInteractions(element, task, showDetails = true, moveKind = 'deadline') {
       element.draggable = true;
-      element.setAttribute('aria-label', `${task.titulo}. Arrastra para cambiar la fecha límite.`);
+      element.setAttribute('aria-label', moveKind === 'planned'
+        ? `${task.titulo}. Arrastra para cambiar el bloque horario.`
+        : `${task.titulo}. Arrastra para cambiar la fecha límite.`);
       element.addEventListener('dragstart', event => {
         draggedTaskId = task.id;
+        draggedTaskMoveKind = moveKind;
         event.dataTransfer.effectAllowed = 'move';
         event.dataTransfer.setData('text/plain', String(task.id));
         element.classList.add('dragging');
       });
       element.addEventListener('dragend', () => {
         draggedTaskId = null;
+        draggedTaskMoveKind = null;
         element.classList.remove('dragging');
         document.querySelectorAll('.drag-over').forEach(target => target.classList.remove('drag-over'));
         if (popoverAnchor?.matches('.upcoming-more-count, .cal-more-count')) {
           schedulePopoverDismiss();
         }
       });
-      enableTouchCalendarDrag(element, task);
+      enableTouchCalendarDrag(element, task, moveKind);
       element.addEventListener('click', event => event.stopPropagation());
       if (showDetails) {
         element.addEventListener('mouseenter', event => showPopover(event, task));
@@ -1818,20 +2126,25 @@
       }
     }
 
-    function createCalendarPill(task) {
+    function createCalendarPill(entry) {
+      const task = entry.task;
+      const moveKind = entry.kind;
       const pill = document.createElement('div');
       const prio = task.prioridad.toLowerCase();
       const done = task.estado === 'COMPLETADA';
-      pill.className = `cal-pill ${prio}${done ? ' completada' : ''}`;
-      pill.title = task.titulo;
-      enableCalendarTaskInteractions(pill, task);
+      const deadlineMarker = moveKind === 'deadline';
+      pill.className = `cal-pill ${prio}${done ? ' completada' : ''}${deadlineMarker ? ' deadline-marker' : ''}`;
+      pill.title = deadlineMarker ? `Fecha límite: ${task.titulo}` : task.titulo;
+      enableCalendarTaskInteractions(pill, task, true, moveKind);
 
       const title = document.createElement('span');
       title.className = 'cal-pill-title';
       title.textContent = task.titulo;
       pill.appendChild(title);
 
-      const time = formatDeadlineTime(task.fechaLimite);
+      const time = moveKind === 'planned'
+        ? `${formatDeadlineTime(task.inicioProgramado)}–${formatDeadlineTime(task.finProgramado)}`
+        : formatDeadlineTime(task.fechaLimite);
       if (time) {
         const timeLabel = document.createElement('span');
         timeLabel.className = 'cal-pill-time';
@@ -1881,20 +2194,24 @@
       list.className = 'cal-more-list';
       tasks.forEach(task => {
         const item = document.createElement('li');
-        item.className = `cal-more-item ${String(task.prioridad || '').toLowerCase()}`;
-        item.dataset.taskId = String(task.id);
+        const calendarEntry = task.task ? task : { task, kind: task.inicioProgramado ? 'planned' : 'deadline' };
+        const entryTask = calendarEntry.task;
+        item.className = `cal-more-item ${String(entryTask.prioridad || '').toLowerCase()}${calendarEntry.kind === 'deadline' ? ' deadline-marker' : ''}`;
+        item.dataset.taskId = String(entryTask.id);
         const title = document.createElement('span');
         title.className = 'cal-more-task-title';
-        title.textContent = task.titulo;
+        title.textContent = entryTask.titulo;
         const meta = document.createElement('span');
         meta.className = 'cal-more-task-meta';
         meta.textContent = [
-          formatDeadlineTime(task.fechaLimite),
-          stateLabels[task.estado] || task.estado,
-          priorityLabels[task.prioridad] || task.prioridad
+          calendarEntry.kind === 'planned'
+            ? `${formatDeadlineTime(entryTask.inicioProgramado)}–${formatDeadlineTime(entryTask.finProgramado)}`
+            : formatDeadlineTime(entryTask.fechaLimite),
+          stateLabels[entryTask.estado] || entryTask.estado,
+          priorityLabels[entryTask.prioridad] || entryTask.prioridad
         ].filter(Boolean).join(' · ');
         item.append(title, meta);
-        enableCalendarTaskInteractions(item, task, false);
+        enableCalendarTaskInteractions(item, entryTask, false, calendarEntry.kind);
         list.appendChild(item);
       });
       pop.appendChild(list);
@@ -1911,11 +2228,18 @@
       pop.className = 'cal-popover';
       const stateLabel = { PENDIENTE: 'Pendiente', EN_PROGRESO: 'En progreso', COMPLETADA: 'Completada' };
       const prioLabel = { ALTA: 'Alta', MEDIA: 'Media', BAJA: 'Baja' };
+      const deadlineInfo = t.fechaLimite
+        ? `<span>${icon('calendar-date')} Límite: ${formatDeadline(t.fechaLimite)}</span>`
+        : '';
+      const plannedInfo = t.inicioProgramado && t.finProgramado
+        ? `<span>${icon('calendar')} Planificada: ${formatDeadline(t.inicioProgramado)}–${formatDeadlineTime(t.finProgramado)}</span>`
+        : '';
       pop.innerHTML = `
     <strong>${escHtml(t.titulo)}</strong>
     <span>${prioLabel[t.prioridad] || t.prioridad}</span>
     <span>${stateLabel[t.estado] || t.estado}</span>
-    <span>${icon('calendar-date')} Límite: ${formatDeadline(t.fechaLimite)}</span>
+    ${deadlineInfo}
+    ${plannedInfo}
     ${t.descripcion ? `<span style="margin-top:.3rem;color:var(--text);font-size:.75rem">${escHtml(t.descripcion)}</span>` : ''}
   `;
       document.body.appendChild(pop);

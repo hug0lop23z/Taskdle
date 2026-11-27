@@ -26,9 +26,10 @@ El flujo de Taskdle ayuda a pasar de una nota rápida a un plan que puedes segui
 - **Organizar el trabajo:** crea tareas, añade una descripción y asigna una prioridad y un estado.
 - **Corregir tareas:** edita el título, la descripción, la prioridad, la fecha límite y las subtareas; en una serie recurrente, los cambios afectan a la ocurrencia seleccionada y a las siguientes pendientes.
 - **Dividir tareas grandes:** agrega subtareas y consulta su avance sin perder de vista el objetivo principal.
-- **Planificar con fechas:** establece una fecha y una hora límite; consulta tus tareas en calendario mensual, semanal o diario.
+- **Planificar con fechas:** establece una fecha y una hora límite sin confundirlas con el bloque de trabajo; programa inicio y fin y consulta tus tareas en calendario mensual, semanal o diario.
 - **Actuar desde el calendario:** selecciona un día u hora para iniciar una tarea con esa fecha ya preparada.
 - **Reorganizar sobre la marcha:** arrastra una tarea a otro día para cambiar su fecha límite; en la vista diaria puedes moverla a otra hora.
+- **Sincronizar con Google Calendar:** envía los bloques planificados al calendario principal de Google; los eventos gestionados por Taskdle se actualizan o retiran al volver a sincronizar.
 - **Programar tareas recurrentes:** repite una tarea cada día, semana o mes; mantiene 12 ocurrencias programadas y añade otra al completar una.
 - **Colaborar y revisar:** comparte tareas, filtra por estado o vencimiento y gestiona varias tareas a la vez.
 - **Compartir por grupos:** crea grupos como Familia o Trabajo, añade amigos registrados y comparte una tarea con todo el grupo.
@@ -36,13 +37,13 @@ El flujo de Taskdle ayuda a pasar de una nota rápida a un plan que puedes segui
 
 ## Una vista clara del trabajo
 
-En la parte superior, el panel muestra las tareas con fecha límite de hoy y de los próximos cuatro días. En cada tarjeta puedes consultar el estado, la prioridad, la fecha límite y, cuando corresponda, el avance de las subtareas.
+En la parte superior, el panel muestra las tareas con fecha límite de hoy y de los próximos seis días. En cada tarjeta puedes consultar el estado, la prioridad, la fecha límite y, cuando corresponda, el avance de las subtareas.
 
 ![Panel de tareas de Taskdle con prioridades, estados y subtareas](docs/images/taskdle-escritorio.png)
 
 ## Cómo se organiza el día
 
-El calendario convierte las fechas límite en una planificación visual. Puedes cambiar entre las vistas de **mes**, **semana** y **día**; en la vista diaria, las tareas con hora se sitúan en su franja correspondiente.
+El calendario muestra los bloques de trabajo en su horario reservado y conserva las fechas límite como referencias independientes. Puedes cambiar entre las vistas de **mes**, **semana** y **día**; en la vista diaria, los bloques se sitúan en su franja correspondiente.
 
 Al seleccionar una fecha —o una hora en la vista diaria— se abre el formulario para crear una tarea con la fecha elegida. Así puedes planificar y registrar una tarea en el mismo flujo.
 
@@ -206,6 +207,10 @@ USING (
   AT TIME ZONE 'Europe/Madrid'
 );
 ```
+
+Las columnas `inicio_planificado` y `fin_planificado` se añaden automáticamente al iniciar el backend mediante `schema.sql`. Para conectar Google Calendar, habilita **Google Calendar API** en Google Cloud, configura la pantalla de consentimiento y crea un cliente OAuth de tipo aplicación web. Añade como origen autorizado el que muestra Taskdle en el diálogo de Google Calendar (por ejemplo, `http://localhost:3000` y el dominio de producción). No introduzcas un secreto de cliente: la aplicación solo necesita el Client ID público.
+
+Desde el menú de usuario, abre **Google Calendar**, introduce el Client ID y pulsa **Guardar y sincronizar**. Tras autorizar el acceso, Taskdle sincroniza en una sola dirección los bloques planificados con el calendario principal. La acción es manual; los eventos creados por Taskdle se actualizan o eliminan en la siguiente sincronización si cambia o desaparece su bloque. No se modifican otros eventos de Google Calendar.
 
 ## API principal
 

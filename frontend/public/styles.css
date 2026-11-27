@@ -1524,6 +1524,15 @@
       margin-bottom: 0;
     }
 
+    #modal-overlay #planning-extra-item .form-row {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .google-calendar-note {
+      margin: 0 0 1rem;
+      line-height: 1.5;
+    }
+
     #modal-overlay .task-description-input {
       width: 100%;
       min-height: 104px;
@@ -2033,6 +2042,11 @@
       color: var(--success);
     }
 
+    .cal-pill.deadline-marker {
+      outline: 1px dashed currentColor;
+      outline-offset: -1px;
+    }
+
     .cal-pill.completada {
       opacity: .45;
       text-decoration: line-through;
@@ -2091,6 +2105,10 @@
       background: var(--surface);
       cursor: grab;
       user-select: none;
+    }
+
+    .cal-more-item.deadline-marker {
+      border-left-style: dashed;
     }
 
     .cal-more-item:hover {
@@ -2669,6 +2687,11 @@
 
       #modal-overlay .modal-form .form-row {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: .65rem;
+      }
+
+      #modal-overlay #planning-extra-item .form-row {
+        grid-template-columns: minmax(0, 1fr);
         gap: .65rem;
       }
 

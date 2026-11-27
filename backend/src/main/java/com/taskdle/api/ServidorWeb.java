@@ -224,6 +224,16 @@ public class ServidorWeb {
             String compartirCon = extractJson(body, "compartirCon");
             String frecuenciaStr = extractJson(body, "frecuenciaRepeticion");
             String zonaStr = extractJson(body, "zonaHoraria");
+            Instant inicioProgramado;
+            Instant finProgramado;
+            try {
+                inicioProgramado = parseOptionalInstant(extractJson(body, "inicioProgramado"));
+                finProgramado = parseOptionalInstant(extractJson(body, "finProgramado"));
+                validatePlanificacion(inicioProgramado, finProgramado);
+            } catch (RuntimeException e) {
+                respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"El inicio y el fin del bloque deben ser válidos y el fin posterior al inicio\"}");
+                return;
+            }
 
             if (nombre == null || titulo == null || titulo.isBlank()) {
                 respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"Datos inválidos\"}");
@@ -253,6 +263,8 @@ public class ServidorWeb {
             } else {
                 tarea = new TareaSimple(titulo, descripcion == null ? "" : descripcion, prio);
             }
+            tarea.setInicioProgramado(inicioProgramado);
+            tarea.setFinProgramado(finProgramado);
 
             if (subtareasStr != null && !subtareasStr.isBlank()) {
                 for (String sub : subtareasStr.split("\\|")) {
@@ -321,6 +333,25 @@ public class ServidorWeb {
                     : "{\"ok\":false,\"mensaje\":\"No puedes cambiar la fecha de esta tarea\"}");
             } catch (Exception e) {
                 respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"Fecha límite inválida\"}");
+            }
+            return;
+        }
+
+        Matcher mPlanificacion = Pattern.compile("/api/tareas/(\\d+)/planificacion").matcher(path);
+        if ("PUT".equals(method) && mPlanificacion.matches()) {
+            int id = Integer.parseInt(mPlanificacion.group(1));
+            String body = readBody(ex);
+            String nombre = extractJson(body, "usuario");
+            try {
+                Instant inicio = parseOptionalInstant(extractJson(body, "inicioProgramado"));
+                Instant fin = parseOptionalInstant(extractJson(body, "finProgramado"));
+                validatePlanificacion(inicio, fin);
+                boolean ok = nombre != null && gestor.actualizarPlanificacion(id, nombre, inicio, fin);
+                respond(ex, ok ? 200 : 403, "application/json", ok
+                    ? "{\"ok\":true}"
+                    : "{\"ok\":false,\"mensaje\":\"No puedes cambiar la planificación de esta tarea\"}");
+            } catch (RuntimeException e) {
+                respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"El inicio y el fin del bloque deben ser válidos y el fin posterior al inicio\"}");
             }
             return;
         }
@@ -422,6 +453,8 @@ public class ServidorWeb {
             String prioridadStr = extractJson(body, "prioridad");
             String fechaStr = extractJson(body, "fechaLimite");
             String subtareasStr = extractJson(body, "subtareas");
+            String inicioProgramadoStr = extractJson(body, "inicioProgramado");
+            String finProgramadoStr = extractJson(body, "finProgramado");
 
             if (nombre == null || titulo == null || titulo.isBlank()
                     || prioridadStr == null || !("SIMPLE".equals(tipo) || "FECHA".equals(tipo))) {
@@ -436,10 +469,15 @@ public class ServidorWeb {
                     if (fechaStr == null) throw new IllegalArgumentException("Falta la fecha límite");
                     fecha = Instant.parse(fechaStr);
                 }
+                Instant inicioProgramado = parseOptionalInstant(inicioProgramadoStr);
+                Instant finProgramado = parseOptionalInstant(finProgramadoStr);
+                validatePlanificacion(inicioProgramado, finProgramado);
 
                 Tarea cambios = "FECHA".equals(tipo)
                     ? new TareaConFechaLimite(titulo, descripcion == null ? "" : descripcion, prioridad, fecha)
                     : new TareaSimple(titulo, descripcion == null ? "" : descripcion, prioridad);
+                cambios.setInicioProgramado(inicioProgramado);
+                cambios.setFinProgramado(finProgramado);
                 if (subtareasStr != null && !subtareasStr.isBlank()) {
                     for (String subtarea : subtareasStr.split("\\|")) {
                         if (!subtarea.trim().isEmpty()) cambios.agregarSubtarea(new Subtarea(subtarea.trim()));
@@ -514,6 +552,19 @@ public class ServidorWeb {
         return null;
     }
 
+    private static Instant parseOptionalInstant(String value) {
+        return value == null || value.isBlank() || "null".equals(value) ? null : Instant.parse(value);
+    }
+
+    private static void validatePlanificacion(Instant inicio, Instant fin) {
+        if ((inicio == null) != (fin == null)) {
+            throw new IllegalArgumentException("El inicio y el fin son obligatorios juntos");
+        }
+        if (inicio != null && !fin.isAfter(inicio)) {
+            throw new IllegalArgumentException("El fin debe ser posterior al inicio");
+        }
+    }
+
     static String queryParam(String query, String key) {
         if (query == null) return null;
         for (String part : query.split("&")) {
@@ -560,6 +611,8 @@ public class ServidorWeb {
             sb.append(",\"vencida\":").append(tcfl.estaVencida());
             sb.append(",\"diasRestantes\":").append(tcfl.getDiasRestantes());
         }
+        sb.append(",\"inicioProgramado\":").append(jsonInstant(t.getInicioProgramado()));
+        sb.append(",\"finProgramado\":").append(jsonInstant(t.getFinProgramado()));
         if (t.getSerieRecurrenteId() != null && t.getFrecuenciaRepeticion() != null) {
             sb.append(",\"recurrenciaSerieId\":").append(t.getSerieRecurrenteId());
             if (t.getIndiceRecurrente() != null) {
@@ -586,5 +639,9 @@ public class ServidorWeb {
         if (s == null) return "";
         return s.replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
+    }
+
+    private static String jsonInstant(Instant instant) {
+        return instant == null ? "null" : "\"" + instant + "\"";
     }
 }

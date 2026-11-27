@@ -148,6 +148,31 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="google-calendar-modal-overlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="google-calendar-title">
+      <div class="modal-header">
+        <div>
+          <h3 id="google-calendar-title">Google Calendar</h3>
+          <p class="modal-subtitle">Envía tus bloques planificados al calendario principal de Google.</p>
+        </div>
+        <button class="btn-close" type="button" onclick="closeGoogleCalendarModal()" aria-label="Cerrar"><svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg></button>
+      </div>
+      <div class="modal-form">
+        <p class="form-hint google-calendar-note">Sincronización en una dirección: Taskdle actualiza los eventos que crea y elimina los que ya no tienen un bloque planificado. Tus otros eventos no se modifican.</p>
+        <div class="form-group">
+          <label for="google-calendar-client-id">OAuth Client ID</label>
+          <input type="text" id="google-calendar-client-id" autocomplete="off" placeholder="...apps.googleusercontent.com">
+          <small class="form-hint">Configura Google Calendar API y un cliente OAuth para aplicación web con este origen autorizado: <span id="google-calendar-origin"></span></small>
+        </div>
+        <div class="err-msg" id="google-calendar-error"></div>
+        <div class="modal-actions">
+          <button class="btn-secondary" type="button" onclick="closeGoogleCalendarModal()">Cancelar</button>
+          <button class="btn-primary-modal" id="google-calendar-sync-btn" type="button" onclick="syncGoogleCalendar()">Guardar y sincronizar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Dashboard ─────────────────────────────────────────────── -->
   <div id="dashboard-page" data-view="list">
     <header>
@@ -177,6 +202,7 @@
             <div class="user-menu-heading" id="user-menu-heading">Usuario</div>
             <button class="user-menu-item" id="btn-theme" type="button" onclick="toggleTheme()"><svg class="icon" aria-hidden="true"><use href="#icon-moon"></use></svg><span>Tema</span></button>
             <button class="user-menu-item" type="button" onclick="toggleUserMenu(true); openGroupsModal()"><svg class="icon" aria-hidden="true"><use href="#icon-users"></use></svg><span>Grupos y amigos</span></button>
+            <button class="user-menu-item" type="button" onclick="toggleUserMenu(true); openGoogleCalendarModal()"><svg class="icon" aria-hidden="true"><use href="#icon-calendar"></use></svg><span>Google Calendar</span></button>
             <button class="user-menu-item logout" type="button" onclick="doLogout()"><svg class="icon" aria-hidden="true"><use href="#icon-logout"></use></svg><span>Cerrar sesión</span></button>
           </div>
         </div>
@@ -321,6 +347,26 @@
         </div>
         <div class="task-options-heading">Opcional</div>
         <div class="task-extra-list">
+          <details class="task-extra-item" id="planning-extra-item">
+            <summary>
+              <span class="extra-icon"><svg class="icon" aria-hidden="true"><use href="#icon-calendar"></use></svg></span>
+              <span class="extra-copy"><strong>Planificación</strong><small>Reserva un bloque, separado de la fecha límite</small></span>
+              <svg class="icon extra-chevron" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+            </summary>
+            <div class="task-extra-content">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="m-inicio-programado">Inicio</label>
+                  <input type="datetime-local" id="m-inicio-programado">
+                </div>
+                <div class="form-group">
+                  <label for="m-fin-programado">Fin</label>
+                  <input type="datetime-local" id="m-fin-programado">
+                </div>
+              </div>
+              <small class="form-hint">Al completar ambos campos, la tarea aparecerá en este horario del calendario.</small>
+            </div>
+          </details>
           <details class="task-extra-item">
             <summary>
               <span class="extra-icon"><svg class="icon" aria-hidden="true"><use href="#icon-clipboard"></use></svg></span>

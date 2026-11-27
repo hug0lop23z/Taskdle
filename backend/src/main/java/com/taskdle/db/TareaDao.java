@@ -18,7 +18,7 @@ public class TareaDao {
         List<Tarea> lista = new ArrayList<>();
         try (Connection c = Database.getConnection();
              PreparedStatement ps = c.prepareStatement(
-                 "SELECT DISTINCT t.id, t.dueno, t.tipo, t.titulo, t.descripcion, t.prioridad, t.estado, t.fecha_creacion, t.fecha_limite, " +
+                 "SELECT DISTINCT t.id, t.dueno, t.tipo, t.titulo, t.descripcion, t.prioridad, t.estado, t.fecha_creacion, t.fecha_limite, t.inicio_planificado, t.fin_planificado, " +
                  "t.recurrencia_id, t.indice_recurrencia, tr.frecuencia, tr.activa AS recurrencia_activa " +
                  "FROM tareas t " +
                  "LEFT JOIN tareas_compartidas tc ON t.id = tc.tarea_id " +
@@ -44,7 +44,7 @@ public class TareaDao {
     public Tarea buscarPorId(int id, String usuario) {
         try (Connection c = Database.getConnection();
              PreparedStatement ps = c.prepareStatement(
-                 "SELECT DISTINCT t.id, t.dueno, t.tipo, t.titulo, t.descripcion, t.prioridad, t.estado, t.fecha_creacion, t.fecha_limite, " +
+                 "SELECT DISTINCT t.id, t.dueno, t.tipo, t.titulo, t.descripcion, t.prioridad, t.estado, t.fecha_creacion, t.fecha_limite, t.inicio_planificado, t.fin_planificado, " +
                  "t.recurrencia_id, t.indice_recurrencia, tr.frecuencia, tr.activa AS recurrencia_activa " +
                  "FROM tareas t " +
                  "LEFT JOIN tareas_compartidas tc ON t.id = tc.tarea_id " +
@@ -68,8 +68,8 @@ public class TareaDao {
     public int insertar(Tarea t, String usuario) {
         try (Connection c = Database.getConnection();
              PreparedStatement ps = c.prepareStatement(
-                 "INSERT INTO tareas(dueno, tipo, titulo, descripcion, prioridad, estado, fecha_creacion, fecha_limite) " +
-                 "VALUES(?,?,?,?,?,?,?,?) RETURNING id")) {
+                 "INSERT INTO tareas(dueno, tipo, titulo, descripcion, prioridad, estado, fecha_creacion, fecha_limite, inicio_planificado, fin_planificado) " +
+                 "VALUES(?,?,?,?,?,?,?,?,?,?) RETURNING id")) {
             ps.setString(1, usuario);
             ps.setString(2, t.getTipoTarea());
             ps.setString(3, t.getTitulo());
@@ -80,6 +80,8 @@ public class TareaDao {
             Instant fl = t.getFechaLimite();
             if (fl != null) ps.setTimestamp(8, Timestamp.from(fl));
             else ps.setNull(8, Types.TIMESTAMP_WITH_TIMEZONE);
+            setTimestampOrNull(ps, 9, t.getInicioProgramado());
+            setTimestampOrNull(ps, 10, t.getFinProgramado());
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 int newId = rs.getInt(1);
@@ -119,7 +121,7 @@ public class TareaDao {
                 ZonedDateTime inicio = conFecha.getFechaLimite().atZone(zonaHoraria);
                 for (int indice = 0; indice < cantidadOcurrencias; indice++) {
                     Instant fecha = frecuencia.ocurrenciaDesde(inicio, indice).toInstant();
-                    ids.add(insertarOcurrencia(tarea, usuario, serieId, indice, fecha, c));
+                    ids.add(insertarOcurrencia(tarea, usuario, serieId, indice, fecha, zonaHoraria, c));
                 }
                 c.commit();
             } catch (SQLException | RuntimeException e) {
@@ -176,7 +178,8 @@ public class TareaDao {
                 int creadas = 0;
                 while (pendientes < cantidadOcurrencias) {
                     Instant fecha = frecuencia.ocurrenciaDesde(inicio, siguienteIndice).toInstant();
-                    int nuevoId = insertarOcurrencia(plantilla, propietarioSerie, serieId, siguienteIndice, fecha, c);
+                    int nuevoId = insertarOcurrencia(
+                        plantilla, propietarioSerie, serieId, siguienteIndice, fecha, inicio.getZone(), c);
                     copiarCompartidos(tareaId, nuevoId, c);
                     siguienteIndice++;
                     pendientes++;
@@ -290,6 +293,21 @@ public class TareaDao {
         }
     }
 
+    public boolean actualizarPlanificacion(int id, String usuario, Instant inicio, Instant fin) {
+        try (Connection c = Database.getConnection();
+             PreparedStatement ps = c.prepareStatement(
+                 "UPDATE tareas SET inicio_planificado=?, fin_planificado=? WHERE id=? AND dueno=?")) {
+            setTimestampOrNull(ps, 1, inicio);
+            setTimestampOrNull(ps, 2, fin);
+            ps.setInt(3, id);
+            ps.setString(4, usuario);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("[TareaDao] actualizarPlanificacion: " + e.getMessage());
+            return false;
+        }
+    }
+
     public boolean actualizarTarea(int id, String usuario, Tarea cambios) {
         try (Connection c = Database.getConnection()) {
             c.setAutoCommit(false);
@@ -334,12 +352,16 @@ public class TareaDao {
 
                 List<Integer> ids = new ArrayList<>();
                 List<Instant> fechas = new ArrayList<>();
+                List<Instant> iniciosProgramados = new ArrayList<>();
+                List<Instant> finesProgramados = new ArrayList<>();
                 if (serieId == null) {
                     ids.add(id);
                     fechas.add(cambios.getFechaLimite());
+                    iniciosProgramados.add(cambios.getInicioProgramado());
+                    finesProgramados.add(cambios.getFinProgramado());
                 } else {
                     try (PreparedStatement ps = c.prepareStatement(
-                            "SELECT id, fecha_limite FROM tareas WHERE recurrencia_id=? AND indice_recurrencia>=? " +
+                            "SELECT id, fecha_limite, inicio_planificado, fin_planificado FROM tareas WHERE recurrencia_id=? AND indice_recurrencia>=? " +
                             "AND (id=? OR estado<>'COMPLETADA') ORDER BY indice_recurrencia FOR UPDATE")) {
                         ps.setInt(1, serieId);
                         ps.setInt(2, indice);
@@ -354,6 +376,14 @@ public class TareaDao {
                                         .plus(desplazamiento).atZone(zona).toInstant();
                                 ids.add(tareaId);
                                 fechas.add(nuevaFecha);
+                                Timestamp inicioProgramado = rs.getTimestamp("inicio_planificado");
+                                Timestamp finProgramado = rs.getTimestamp("fin_planificado");
+                                iniciosProgramados.add(tareaId == id
+                                    ? cambios.getInicioProgramado()
+                                    : inicioProgramado == null ? null : inicioProgramado.toInstant());
+                                finesProgramados.add(tareaId == id
+                                    ? cambios.getFinProgramado()
+                                    : finProgramado == null ? null : finProgramado.toInstant());
                             }
                         }
                     }
@@ -381,7 +411,7 @@ public class TareaDao {
 
                 for (int i = 0; i < ids.size(); i++) {
                     try (PreparedStatement ps = c.prepareStatement(
-                            "UPDATE tareas SET tipo=?, titulo=?, descripcion=?, prioridad=?, fecha_limite=? " +
+                            "UPDATE tareas SET tipo=?, titulo=?, descripcion=?, prioridad=?, fecha_limite=?, inicio_planificado=?, fin_planificado=? " +
                             "WHERE id=? AND dueno=?")) {
                         ps.setString(1, cambios.getTipoTarea());
                         ps.setString(2, cambios.getTitulo());
@@ -389,8 +419,10 @@ public class TareaDao {
                         ps.setString(4, cambios.getPrioridad().name());
                         if (fechas.get(i) == null) ps.setNull(5, Types.TIMESTAMP_WITH_TIMEZONE);
                         else ps.setTimestamp(5, Timestamp.from(fechas.get(i)));
-                        ps.setInt(6, ids.get(i));
-                        ps.setString(7, usuario);
+                        setTimestampOrNull(ps, 6, iniciosProgramados.get(i));
+                        setTimestampOrNull(ps, 7, finesProgramados.get(i));
+                        ps.setInt(8, ids.get(i));
+                        ps.setString(9, usuario);
                         if (ps.executeUpdate() == 0) throw new SQLException("No se pudo actualizar la tarea");
                     }
                     reemplazarSubtareas(ids.get(i), cambios.getSubtareas(), c);
@@ -483,11 +515,11 @@ public class TareaDao {
     }
 
     private int insertarOcurrencia(Tarea plantilla, String usuario, int serieId, int indice,
-                                   Instant fechaLimite, Connection c) throws SQLException {
+                                   Instant fechaLimite, ZoneId zonaHoraria, Connection c) throws SQLException {
         int id;
         try (PreparedStatement ps = c.prepareStatement(
-                "INSERT INTO tareas(dueno, tipo, titulo, descripcion, prioridad, estado, fecha_creacion, fecha_limite, recurrencia_id, indice_recurrencia) " +
-                "VALUES(?,?,?,?,?,?,?,?,?,?) RETURNING id")) {
+                "INSERT INTO tareas(dueno, tipo, titulo, descripcion, prioridad, estado, fecha_creacion, fecha_limite, recurrencia_id, indice_recurrencia, inicio_planificado, fin_planificado) " +
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id")) {
             ps.setString(1, usuario);
             ps.setString(2, plantilla.getTipoTarea());
             ps.setString(3, plantilla.getTitulo());
@@ -498,6 +530,21 @@ public class TareaDao {
             ps.setTimestamp(8, Timestamp.from(fechaLimite));
             ps.setInt(9, serieId);
             ps.setInt(10, indice);
+            Instant start = plantilla.getInicioProgramado();
+            Instant end = plantilla.getFinProgramado();
+            if (start != null && plantilla.getFechaLimite() != null) {
+                LocalDateTime limiteBase = plantilla.getFechaLimite().atZone(zonaHoraria).toLocalDateTime();
+                LocalDateTime limiteNuevo = fechaLimite.atZone(zonaHoraria).toLocalDateTime();
+                Duration desplazamiento = Duration.between(limiteBase, limiteNuevo);
+                start = start.atZone(zonaHoraria).toLocalDateTime()
+                    .plus(desplazamiento).atZone(zonaHoraria).toInstant();
+                if (end != null) {
+                    end = end.atZone(zonaHoraria).toLocalDateTime()
+                        .plus(desplazamiento).atZone(zonaHoraria).toInstant();
+                }
+            }
+            setTimestampOrNull(ps, 11, start);
+            setTimestampOrNull(ps, 12, end);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) throw new SQLException("No se pudo crear una ocurrencia");
                 id = rs.getInt(1);
@@ -512,7 +559,7 @@ public class TareaDao {
 
     private Tarea buscarPlantillaSerie(int tareaId, Connection c) throws SQLException {
         try (PreparedStatement ps = c.prepareStatement(
-                "SELECT id, dueno, tipo, titulo, descripcion, prioridad, estado, fecha_creacion, fecha_limite, " +
+                "SELECT id, dueno, tipo, titulo, descripcion, prioridad, estado, fecha_creacion, fecha_limite, inicio_planificado, fin_planificado, " +
                 "recurrencia_id, indice_recurrencia, (SELECT frecuencia FROM tareas_recurrentes WHERE id=t.recurrencia_id) AS frecuencia, " +
                 "(SELECT activa FROM tareas_recurrentes WHERE id=t.recurrencia_id) AS recurrencia_activa " +
                 "FROM tareas t WHERE id=?")) {
@@ -594,6 +641,10 @@ public class TareaDao {
         } else {
             tarea = new TareaSimple(id, titulo, desc, p, e, fc);
         }
+        Timestamp inicioProgramado = rs.getTimestamp("inicio_planificado");
+        Timestamp finProgramado = rs.getTimestamp("fin_planificado");
+        tarea.setInicioProgramado(inicioProgramado == null ? null : inicioProgramado.toInstant());
+        tarea.setFinProgramado(finProgramado == null ? null : finProgramado.toInstant());
         tarea.setPropietario(rs.getString("dueno"));
         int serieId = rs.getInt("recurrencia_id");
         if (!rs.wasNull()) tarea.setSerieRecurrenteId(serieId);
@@ -603,5 +654,10 @@ public class TareaDao {
         if (frecuencia != null) tarea.setFrecuenciaRepeticion(FrecuenciaRepeticion.fromString(frecuencia));
         tarea.setRepeticionActiva(rs.getBoolean("recurrencia_activa"));
         return tarea;
+    }
+
+    private static void setTimestampOrNull(PreparedStatement ps, int index, Instant value) throws SQLException {
+        if (value == null) ps.setNull(index, Types.TIMESTAMP_WITH_TIMEZONE);
+        else ps.setTimestamp(index, Timestamp.from(value));
     }
 }

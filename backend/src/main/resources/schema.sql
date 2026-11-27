@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS tareas (
 
 ALTER TABLE tareas ADD COLUMN IF NOT EXISTS recurrencia_id INT REFERENCES tareas_recurrentes(id) ON DELETE SET NULL;
 ALTER TABLE tareas ADD COLUMN IF NOT EXISTS indice_recurrencia INT;
+ALTER TABLE tareas ADD COLUMN IF NOT EXISTS inicio_planificado TIMESTAMPTZ;
+ALTER TABLE tareas ADD COLUMN IF NOT EXISTS fin_planificado TIMESTAMPTZ;
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_tareas_recurrencia_indice
     ON tareas(recurrencia_id, indice_recurrencia)

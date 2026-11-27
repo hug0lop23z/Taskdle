@@ -258,6 +258,7 @@ public class GestorUsuarios {
                 Instant fecha = frecuencia.ocurrenciaDesde(serie.inicio, indice).toInstant();
                 TareaConFechaLimite ocurrencia = new TareaConFechaLimite(
                     tarea.getTitulo(), tarea.getDescripcion(), tarea.getPrioridad(), fecha);
+                copiarPlanificacionRecurrente(tarea, ocurrencia, fecha, zonaHoraria);
                 for (Subtarea subtarea : tarea.getSubtareas()) {
                     ocurrencia.agregarSubtarea(new Subtarea(subtarea.getTitulo()));
                 }
@@ -302,6 +303,7 @@ public class GestorUsuarios {
             Instant fecha = serie.frecuencia.ocurrenciaDesde(serie.inicio, siguienteIndice).toInstant();
             TareaConFechaLimite nueva = new TareaConFechaLimite(
                 tarea.getTitulo(), tarea.getDescripcion(), tarea.getPrioridad(), fecha);
+            copiarPlanificacionRecurrente(tarea, nueva, fecha, serie.inicio.getZone());
             for (Subtarea subtarea : tarea.getSubtareas()) {
                 nueva.agregarSubtarea(new Subtarea(subtarea.getTitulo()));
             }
@@ -436,6 +438,16 @@ public class GestorUsuarios {
         return false;
     }
 
+    public boolean actualizarPlanificacion(int id, String usuario, Instant inicio, Instant fin) {
+        if (Database.isAvailable()) return tareaDao.actualizarPlanificacion(id, usuario, inicio, fin);
+        if (usuario == null || !usuario.equals(propietariosTareasMemoria.get(id))) return false;
+        Tarea tarea = buscarTarea(id, usuario);
+        if (tarea == null) return false;
+        tarea.setInicioProgramado(inicio);
+        tarea.setFinProgramado(fin);
+        return true;
+    }
+
     public boolean actualizarTarea(int id, String usuario, Tarea cambios) {
         if (Database.isAvailable()) return tareaDao.actualizarTarea(id, usuario, cambios);
         if (usuario == null || !usuario.equals(propietariosTareasMemoria.get(id))) return false;
@@ -476,7 +488,7 @@ public class GestorUsuarios {
                 fecha = destino.getFechaLimite().atZone(zona).toLocalDateTime()
                     .plus(desplazamiento).atZone(zona).toInstant();
             }
-            Tarea actualizada = crearTareaEditada(destino, cambios, fecha);
+            Tarea actualizada = crearTareaEditada(destino, cambios, fecha, destino.getId() == id);
             for (List<Tarea> lista : tareasMemoria.values()) {
                 for (int i = 0; i < lista.size(); i++) {
                     if (lista.get(i).getId() == destino.getId()) {
@@ -488,7 +500,7 @@ public class GestorUsuarios {
         return !destinos.isEmpty();
     }
 
-    private Tarea crearTareaEditada(Tarea anterior, Tarea cambios, Instant fechaLimite) {
+    private Tarea crearTareaEditada(Tarea anterior, Tarea cambios, Instant fechaLimite, boolean actualizarPlanificacion) {
         Tarea actualizada = "FECHA".equals(cambios.getTipoTarea())
             ? new TareaConFechaLimite(cambios.getTitulo(), cambios.getDescripcion(), cambios.getPrioridad(), fechaLimite)
             : new TareaSimple(cambios.getTitulo(), cambios.getDescripcion(), cambios.getPrioridad());
@@ -500,6 +512,10 @@ public class GestorUsuarios {
         actualizada.setIndiceRecurrente(anterior.getIndiceRecurrente());
         actualizada.setFrecuenciaRepeticion(anterior.getFrecuenciaRepeticion());
         actualizada.setRepeticionActiva(anterior.isRepeticionActiva());
+        actualizada.setInicioProgramado(actualizarPlanificacion
+            ? cambios.getInicioProgramado() : anterior.getInicioProgramado());
+        actualizada.setFinProgramado(actualizarPlanificacion
+            ? cambios.getFinProgramado() : anterior.getFinProgramado());
 
         boolean[] reutilizadas = new boolean[anterior.getSubtareas().size()];
         for (int indice = 0; indice < cambios.getSubtareas().size(); indice++) {
@@ -517,6 +533,19 @@ public class GestorUsuarios {
             actualizada.agregarSubtarea(copia);
         }
         return actualizada;
+    }
+
+    private static void copiarPlanificacionRecurrente(
+            Tarea plantilla, Tarea ocurrencia, Instant nuevaFechaLimite, ZoneId zonaHoraria) {
+        if (plantilla.getInicioProgramado() == null || plantilla.getFinProgramado() == null
+                || plantilla.getFechaLimite() == null) return;
+        LocalDateTime limiteBase = plantilla.getFechaLimite().atZone(zonaHoraria).toLocalDateTime();
+        LocalDateTime limiteNuevo = nuevaFechaLimite.atZone(zonaHoraria).toLocalDateTime();
+        Duration desplazamiento = Duration.between(limiteBase, limiteNuevo);
+        ocurrencia.setInicioProgramado(plantilla.getInicioProgramado().atZone(zonaHoraria)
+            .toLocalDateTime().plus(desplazamiento).atZone(zonaHoraria).toInstant());
+        ocurrencia.setFinProgramado(plantilla.getFinProgramado().atZone(zonaHoraria)
+            .toLocalDateTime().plus(desplazamiento).atZone(zonaHoraria).toInstant());
     }
 
     public boolean eliminarTarea(int id, String usuario) {
