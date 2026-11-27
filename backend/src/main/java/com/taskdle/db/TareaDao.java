@@ -18,7 +18,7 @@ public class TareaDao {
         List<Tarea> lista = new ArrayList<>();
         try (Connection c = Database.getConnection();
              PreparedStatement ps = c.prepareStatement(
-                 "SELECT DISTINCT t.id, t.dueno, t.tipo, t.titulo, t.descripcion, t.prioridad, t.estado, t.fecha_creacion, t.fecha_limite, t.inicio_planificado, t.fin_planificado, " +
+                 "SELECT DISTINCT t.id, t.dueno, t.responsable, t.tipo, t.titulo, t.descripcion, t.prioridad, t.estado, t.fecha_creacion, t.fecha_limite, t.inicio_planificado, t.fin_planificado, " +
                  "t.recurrencia_id, t.indice_recurrencia, tr.frecuencia, tr.activa AS recurrencia_activa " +
                  "FROM tareas t " +
                  "LEFT JOIN tareas_compartidas tc ON t.id = tc.tarea_id " +
@@ -44,7 +44,7 @@ public class TareaDao {
     public Tarea buscarPorId(int id, String usuario) {
         try (Connection c = Database.getConnection();
              PreparedStatement ps = c.prepareStatement(
-                 "SELECT DISTINCT t.id, t.dueno, t.tipo, t.titulo, t.descripcion, t.prioridad, t.estado, t.fecha_creacion, t.fecha_limite, t.inicio_planificado, t.fin_planificado, " +
+                 "SELECT DISTINCT t.id, t.dueno, t.responsable, t.tipo, t.titulo, t.descripcion, t.prioridad, t.estado, t.fecha_creacion, t.fecha_limite, t.inicio_planificado, t.fin_planificado, " +
                  "t.recurrencia_id, t.indice_recurrencia, tr.frecuencia, tr.activa AS recurrencia_activa " +
                  "FROM tareas t " +
                  "LEFT JOIN tareas_compartidas tc ON t.id = tc.tarea_id " +
@@ -63,6 +63,141 @@ public class TareaDao {
             System.err.println("[TareaDao] buscarPorId: " + e.getMessage());
         }
         return null;
+    }
+
+    public List<String> listarParticipantes(int tareaId, String usuario) {
+        List<String> participantes = new ArrayList<>();
+        String acceso = "(t.dueno=? OR EXISTS (SELECT 1 FROM tareas_compartidas permiso " +
+            "WHERE permiso.tarea_id=t.id AND permiso.usuario=?))";
+        String sql = "SELECT nombre FROM (" +
+            "SELECT t.dueno AS nombre FROM tareas t WHERE t.id=? AND " + acceso +
+            " UNION SELECT tc.usuario AS nombre FROM tareas t JOIN tareas_compartidas tc ON tc.tarea_id=t.id " +
+            "WHERE t.id=? AND " + acceso + ") p ORDER BY nombre";
+        try (Connection c = Database.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, tareaId);
+            ps.setString(2, usuario);
+            ps.setString(3, usuario);
+            ps.setInt(4, tareaId);
+            ps.setString(5, usuario);
+            ps.setString(6, usuario);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) participantes.add(rs.getString("nombre"));
+            }
+        } catch (SQLException e) {
+            System.err.println("[TareaDao] listarParticipantes: " + e.getMessage());
+        }
+        return participantes;
+    }
+
+    public List<ActividadTarea> listarHistorial(int tareaId, String usuario) {
+        List<ActividadTarea> historial = new ArrayList<>();
+        try (Connection c = Database.getConnection();
+             PreparedStatement ps = c.prepareStatement(
+                 "SELECT h.id, COALESCE(h.actor, 'Cuenta eliminada') AS actor, h.accion, h.detalle, h.fecha " +
+                 "FROM tareas_historial h JOIN tareas t ON t.id=h.tarea_id " +
+                 "WHERE t.id=? AND (t.dueno=? OR EXISTS " +
+                 "(SELECT 1 FROM tareas_compartidas tc WHERE tc.tarea_id=t.id AND tc.usuario=?)) " +
+                 "ORDER BY h.id DESC LIMIT 20")) {
+            ps.setInt(1, tareaId);
+            ps.setString(2, usuario);
+            ps.setString(3, usuario);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    historial.add(new ActividadTarea(
+                        rs.getLong("id"),
+                        rs.getString("actor"),
+                        rs.getString("accion"),
+                        rs.getString("detalle"),
+                        rs.getTimestamp("fecha").toInstant()
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[TareaDao] listarHistorial: " + e.getMessage());
+        }
+        return historial;
+    }
+
+    public boolean registrarHistorial(int tareaId, String actor, String accion, String detalle) {
+        try (Connection c = Database.getConnection();
+             PreparedStatement ps = c.prepareStatement(
+                 "INSERT INTO tareas_historial(tarea_id, actor, accion, detalle) " +
+                 "SELECT ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM tareas t WHERE t.id=? " +
+                 "AND (t.dueno=? OR EXISTS (SELECT 1 FROM tareas_compartidas tc " +
+                 "WHERE tc.tarea_id=t.id AND tc.usuario=?)))")) {
+            ps.setInt(1, tareaId);
+            ps.setString(2, actor);
+            ps.setString(3, accion);
+            ps.setString(4, detalle);
+            ps.setInt(5, tareaId);
+            ps.setString(6, actor);
+            ps.setString(7, actor);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("[TareaDao] registrarHistorial: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean asignarResponsable(int tareaId, String propietario, String responsable) {
+        try (Connection c = Database.getConnection()) {
+            c.setAutoCommit(false);
+            try {
+                String responsableAnterior;
+                try (PreparedStatement ps = c.prepareStatement(
+                        "SELECT responsable FROM tareas WHERE id=? AND dueno=? FOR UPDATE")) {
+                    ps.setInt(1, tareaId);
+                    ps.setString(2, propietario);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (!rs.next()) {
+                            c.rollback();
+                            return false;
+                        }
+                        responsableAnterior = rs.getString("responsable");
+                    }
+                }
+
+                if (responsable != null && !responsable.equals(propietario)) {
+                    try (PreparedStatement ps = c.prepareStatement(
+                            "SELECT 1 FROM tareas_compartidas WHERE tarea_id=? AND usuario=?")) {
+                        ps.setInt(1, tareaId);
+                        ps.setString(2, responsable);
+                        try (ResultSet rs = ps.executeQuery()) {
+                            if (!rs.next()) {
+                                c.rollback();
+                                return false;
+                            }
+                        }
+                    }
+                }
+
+                if (java.util.Objects.equals(responsableAnterior, responsable)) {
+                    c.commit();
+                    return true;
+                }
+
+                try (PreparedStatement ps = c.prepareStatement(
+                        "UPDATE tareas SET responsable=? WHERE id=? AND dueno=?")) {
+                    if (responsable == null) ps.setNull(1, Types.VARCHAR);
+                    else ps.setString(1, responsable);
+                    ps.setInt(2, tareaId);
+                    ps.setString(3, propietario);
+                    if (ps.executeUpdate() == 0) throw new SQLException("No se pudo asignar el responsable");
+                }
+                String detalle = responsable == null
+                    ? "Se retiró el responsable " + responsableAnterior
+                    : "Responsable asignado a " + responsable;
+                insertarHistorial(c, tareaId, propietario, "RESPONSABLE", detalle);
+                c.commit();
+                return true;
+            } catch (SQLException | RuntimeException e) {
+                c.rollback();
+                throw e;
+            }
+        } catch (Exception e) {
+            System.err.println("[TareaDao] asignarResponsable: " + e.getMessage());
+            return false;
+        }
     }
 
     public int insertar(Tarea t, String usuario) {
@@ -518,8 +653,8 @@ public class TareaDao {
                                    Instant fechaLimite, ZoneId zonaHoraria, Connection c) throws SQLException {
         int id;
         try (PreparedStatement ps = c.prepareStatement(
-                "INSERT INTO tareas(dueno, tipo, titulo, descripcion, prioridad, estado, fecha_creacion, fecha_limite, recurrencia_id, indice_recurrencia, inicio_planificado, fin_planificado) " +
-                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id")) {
+                "INSERT INTO tareas(dueno, tipo, titulo, descripcion, prioridad, estado, fecha_creacion, fecha_limite, recurrencia_id, indice_recurrencia, inicio_planificado, fin_planificado, responsable) " +
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id")) {
             ps.setString(1, usuario);
             ps.setString(2, plantilla.getTipoTarea());
             ps.setString(3, plantilla.getTitulo());
@@ -545,6 +680,7 @@ public class TareaDao {
             }
             setTimestampOrNull(ps, 11, start);
             setTimestampOrNull(ps, 12, end);
+            ps.setString(13, plantilla.getResponsable());
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) throw new SQLException("No se pudo crear una ocurrencia");
                 id = rs.getInt(1);
@@ -646,6 +782,7 @@ public class TareaDao {
         tarea.setInicioProgramado(inicioProgramado == null ? null : inicioProgramado.toInstant());
         tarea.setFinProgramado(finProgramado == null ? null : finProgramado.toInstant());
         tarea.setPropietario(rs.getString("dueno"));
+        tarea.setResponsable(rs.getString("responsable"));
         int serieId = rs.getInt("recurrencia_id");
         if (!rs.wasNull()) tarea.setSerieRecurrenteId(serieId);
         int indice = rs.getInt("indice_recurrencia");
@@ -654,6 +791,18 @@ public class TareaDao {
         if (frecuencia != null) tarea.setFrecuenciaRepeticion(FrecuenciaRepeticion.fromString(frecuencia));
         tarea.setRepeticionActiva(rs.getBoolean("recurrencia_activa"));
         return tarea;
+    }
+
+    private void insertarHistorial(Connection c, int tareaId, String actor, String accion, String detalle)
+            throws SQLException {
+        try (PreparedStatement ps = c.prepareStatement(
+                "INSERT INTO tareas_historial(tarea_id, actor, accion, detalle) VALUES(?,?,?,?)")) {
+            ps.setInt(1, tareaId);
+            ps.setString(2, actor);
+            ps.setString(3, accion);
+            ps.setString(4, detalle);
+            ps.executeUpdate();
+        }
     }
 
     private static void setTimestampOrNull(PreparedStatement ps, int index, Instant value) throws SQLException {

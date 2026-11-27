@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -15,6 +16,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Servicio principal con soporte dual:
@@ -33,9 +35,11 @@ public class GestorUsuarios {
     private static final Map<Integer, com.taskdle.model.Grupo> gruposMemoria = new ConcurrentHashMap<>();
     private static final Map<Integer, String> propietariosTareasMemoria = new ConcurrentHashMap<>();
     private static final Map<Integer, SerieMemoria> seriesMemoria = new ConcurrentHashMap<>();
+    private static final Map<Integer, List<ActividadTarea>> historialTareasMemoria = new ConcurrentHashMap<>();
     private static final AtomicInteger contadorId = new AtomicInteger(100);
     private static final AtomicInteger contadorGrupo = new AtomicInteger(1);
     private static final AtomicInteger contadorSerie = new AtomicInteger(1);
+    private static final AtomicLong contadorActividad = new AtomicLong(1);
 
     private static final class SerieMemoria {
         private final int id;
@@ -170,25 +174,31 @@ public class GestorUsuarios {
     }
 
     public boolean compartirTareaGrupo(int grupoId, int tareaId, String propietario) {
-        if (Database.isAvailable()) return grupoDao.compartirTarea(grupoId, tareaId, propietario);
-        com.taskdle.model.Grupo grupo = gruposMemoria.get(grupoId);
-        if (grupo == null || !propietario.equalsIgnoreCase(grupo.getPropietario())) return false;
-        Tarea tarea = buscarTarea(tareaId, propietario);
-        if (tarea == null) return false;
-        Integer serieId = tarea.getSerieRecurrenteId();
-        List<Tarea> tareasCompartir = serieId == null
-            ? List.of(tarea)
-            : tareasMemoria.getOrDefault(propietario, Collections.emptyList()).stream()
-                .filter(item -> serieId.equals(item.getSerieRecurrenteId()))
-                .toList();
-        for (String miembro : grupo.getMiembros()) {
-            if (miembro.equalsIgnoreCase(propietario)) continue;
-            List<Tarea> lista = tareasMemoria.computeIfAbsent(miembro, k -> Collections.synchronizedList(new ArrayList<>()));
-            for (Tarea ocurrencia : tareasCompartir) {
-                if (lista.stream().noneMatch(item -> item.getId() == ocurrencia.getId())) lista.add(ocurrencia);
+        boolean ok;
+        if (Database.isAvailable()) {
+            ok = grupoDao.compartirTarea(grupoId, tareaId, propietario);
+        } else {
+            com.taskdle.model.Grupo grupo = gruposMemoria.get(grupoId);
+            if (grupo == null || !propietario.equalsIgnoreCase(grupo.getPropietario())) return false;
+            Tarea tarea = buscarTarea(tareaId, propietario);
+            if (tarea == null) return false;
+            Integer serieId = tarea.getSerieRecurrenteId();
+            List<Tarea> tareasCompartir = serieId == null
+                ? List.of(tarea)
+                : tareasMemoria.getOrDefault(propietario, Collections.emptyList()).stream()
+                    .filter(item -> serieId.equals(item.getSerieRecurrenteId()))
+                    .toList();
+            for (String miembro : grupo.getMiembros()) {
+                if (miembro.equalsIgnoreCase(propietario)) continue;
+                List<Tarea> lista = tareasMemoria.computeIfAbsent(miembro, k -> Collections.synchronizedList(new ArrayList<>()));
+                for (Tarea ocurrencia : tareasCompartir) {
+                    if (lista.stream().noneMatch(item -> item.getId() == ocurrencia.getId())) lista.add(ocurrencia);
+                }
             }
+            ok = true;
         }
-        return true;
+        if (ok) registrarHistorial(tareaId, propietario, "COMPARTIDA", "Tarea compartida con un grupo");
+        return ok;
     }
 
     // ─── Tareas ──────────────────────────────────────────────────────────────
@@ -217,13 +227,14 @@ public class GestorUsuarios {
         if (id <= 0) {
             id = contadorId.getAndIncrement();
             t.setId(id);
-            t.setPropietario(usuario);
             propietariosTareasMemoria.put(id, usuario);
             for (int i = 0; i < t.getSubtareas().size(); i++) {
                 t.getSubtareas().get(i).setId(i + 1);
             }
             tareasMemoria.computeIfAbsent(usuario, k -> Collections.synchronizedList(new ArrayList<>())).add(t);
         }
+        t.setPropietario(usuario);
+        registrarHistorial(t.getId(), usuario, "CREACION", "Tarea creada");
 
         // Procesar usuarios para compartir
         if (compartirCon != null && !compartirCon.isBlank()) {
@@ -258,6 +269,7 @@ public class GestorUsuarios {
                 Instant fecha = frecuencia.ocurrenciaDesde(serie.inicio, indice).toInstant();
                 TareaConFechaLimite ocurrencia = new TareaConFechaLimite(
                     tarea.getTitulo(), tarea.getDescripcion(), tarea.getPrioridad(), fecha);
+                ocurrencia.setResponsable(tarea.getResponsable());
                 copiarPlanificacionRecurrente(tarea, ocurrencia, fecha, zonaHoraria);
                 for (Subtarea subtarea : tarea.getSubtareas()) {
                     ocurrencia.agregarSubtarea(new Subtarea(subtarea.getTitulo()));
@@ -265,6 +277,10 @@ public class GestorUsuarios {
                 prepararOcurrenciaMemoria(ocurrencia, serie, indice, usuario);
                 ids.add(ocurrencia.getId());
             }
+        }
+
+        for (int id : ids) {
+            registrarHistorial(id, usuario, "CREACION", "Tarea recurrente creada");
         }
 
         if (compartirCon != null && !compartirCon.isBlank()) {
@@ -303,6 +319,7 @@ public class GestorUsuarios {
             Instant fecha = serie.frecuencia.ocurrenciaDesde(serie.inicio, siguienteIndice).toInstant();
             TareaConFechaLimite nueva = new TareaConFechaLimite(
                 tarea.getTitulo(), tarea.getDescripcion(), tarea.getPrioridad(), fecha);
+            nueva.setResponsable(tarea.getResponsable());
             copiarPlanificacionRecurrente(tarea, nueva, fecha, serie.inicio.getZone());
             for (Subtarea subtarea : tarea.getSubtareas()) {
                 nueva.agregarSubtarea(new Subtarea(subtarea.getTitulo()));
@@ -399,14 +416,24 @@ public class GestorUsuarios {
             compartido = true;
         }
 
+        if (compartido) {
+            registrarHistorial(id, usuarioOrigen, "COMPARTIDA", "Tarea compartida con " + nombreRealDestino);
+        }
         return compartido;
     }
 
     public boolean actualizarEstado(int id, String usuario, Estado nuevoEstado) {
+        Tarea anterior = buscarTarea(id, usuario);
         if (Database.isAvailable()) {
             try {
                 boolean ok = tareaDao.actualizarEstado(id, usuario, nuevoEstado);
-                if (ok) return true;
+                if (ok) {
+                    if (anterior != null && anterior.getEstado() != nuevoEstado) {
+                        registrarHistorial(id, usuario, "ESTADO",
+                            "Estado cambiado de " + anterior.getEstado() + " a " + nuevoEstado);
+                    }
+                    return true;
+                }
             } catch (Exception ignored) {}
         }
 
@@ -414,7 +441,12 @@ public class GestorUsuarios {
         if (lista != null) {
             for (Tarea t : lista) {
                 if (t.getId() == id) {
+                    Estado anteriorEstado = t.getEstado();
                     t.setEstado(nuevoEstado);
+                    if (anteriorEstado != nuevoEstado) {
+                        registrarHistorial(id, usuario, "ESTADO",
+                            "Estado cambiado de " + anteriorEstado + " a " + nuevoEstado);
+                    }
                     return true;
                 }
             }
@@ -424,14 +456,23 @@ public class GestorUsuarios {
 
     public boolean actualizarFechaLimite(int id, String usuario, java.time.Instant fechaLimite) {
         if (fechaLimite == null) return false;
-        if (Database.isAvailable()) return tareaDao.actualizarFechaLimite(id, usuario, fechaLimite);
+        Tarea anterior = buscarTarea(id, usuario);
+        if (Database.isAvailable()) {
+            boolean ok = tareaDao.actualizarFechaLimite(id, usuario, fechaLimite);
+            if (ok && anterior != null && !Objects.equals(anterior.getFechaLimite(), fechaLimite)) {
+                registrarHistorial(id, usuario, "FECHA_LIMITE", "Fecha límite modificada");
+            }
+            return ok;
+        }
 
         if (!usuario.equals(propietariosTareasMemoria.get(id))) return false;
         List<Tarea> lista = tareasMemoria.get(usuario);
         if (lista == null) return false;
         for (Tarea tarea : lista) {
             if (tarea.getId() == id && tarea instanceof TareaConFechaLimite conFecha) {
+                boolean cambio = !Objects.equals(conFecha.getFechaLimite(), fechaLimite);
                 conFecha.setFechaLimite(fechaLimite);
+                if (cambio) registrarHistorial(id, usuario, "FECHA_LIMITE", "Fecha límite modificada");
                 return true;
             }
         }
@@ -439,23 +480,41 @@ public class GestorUsuarios {
     }
 
     public boolean actualizarPlanificacion(int id, String usuario, Instant inicio, Instant fin) {
-        if (Database.isAvailable()) return tareaDao.actualizarPlanificacion(id, usuario, inicio, fin);
+        Tarea anterior = buscarTarea(id, usuario);
+        if (Database.isAvailable()) {
+            boolean ok = tareaDao.actualizarPlanificacion(id, usuario, inicio, fin);
+            if (ok && anterior != null
+                    && (!Objects.equals(anterior.getInicioProgramado(), inicio)
+                    || !Objects.equals(anterior.getFinProgramado(), fin))) {
+                registrarHistorial(id, usuario, "PLANIFICACION", "Bloque horario modificado");
+            }
+            return ok;
+        }
         if (usuario == null || !usuario.equals(propietariosTareasMemoria.get(id))) return false;
         Tarea tarea = buscarTarea(id, usuario);
         if (tarea == null) return false;
+        boolean cambio = !Objects.equals(tarea.getInicioProgramado(), inicio)
+            || !Objects.equals(tarea.getFinProgramado(), fin);
         tarea.setInicioProgramado(inicio);
         tarea.setFinProgramado(fin);
+        if (cambio) registrarHistorial(id, usuario, "PLANIFICACION", "Bloque horario modificado");
         return true;
     }
 
     public boolean actualizarTarea(int id, String usuario, Tarea cambios) {
-        if (Database.isAvailable()) return tareaDao.actualizarTarea(id, usuario, cambios);
+        Tarea anterior = buscarTarea(id, usuario);
+        if (Database.isAvailable()) {
+            boolean ok = tareaDao.actualizarTarea(id, usuario, cambios);
+            if (ok && anterior != null) registrarCambiosTarea(id, usuario, anterior, cambios);
+            return ok;
+        }
         if (usuario == null || !usuario.equals(propietariosTareasMemoria.get(id))) return false;
 
         List<Tarea> propias = tareasMemoria.get(usuario);
         if (propias == null) return false;
         Tarea seleccionada = propias.stream().filter(t -> t.getId() == id).findFirst().orElse(null);
         if (seleccionada == null) return false;
+        registrarCambiosTarea(id, usuario, seleccionada, cambios);
 
         Integer serieId = seleccionada.getSerieRecurrenteId();
         List<Tarea> destinos = new ArrayList<>();
@@ -508,6 +567,7 @@ public class GestorUsuarios {
         actualizada.setEstado(anterior.getEstado());
         actualizada.setFechaCreacion(anterior.getFechaCreacion());
         actualizada.setPropietario(anterior.getPropietario());
+        actualizada.setResponsable(anterior.getResponsable());
         actualizada.setSerieRecurrenteId(anterior.getSerieRecurrenteId());
         actualizada.setIndiceRecurrente(anterior.getIndiceRecurrente());
         actualizada.setFrecuenciaRepeticion(anterior.getFrecuenciaRepeticion());
@@ -558,7 +618,11 @@ public class GestorUsuarios {
 
         List<Tarea> lista = tareasMemoria.get(usuario);
         if (lista != null) {
-            return lista.removeIf(t -> t.getId() == id);
+            boolean eliminada = lista.removeIf(t -> t.getId() == id);
+            if (eliminada && Objects.equals(usuario, propietariosTareasMemoria.get(id))) {
+                historialTareasMemoria.remove(id);
+            }
+            return eliminada;
         }
         return false;
     }
@@ -580,21 +644,119 @@ public class GestorUsuarios {
         return null;
     }
 
+    public List<String> listarParticipantesTarea(int id, String usuario) {
+        if (usuario == null) return null;
+        Tarea tarea = buscarTarea(id, usuario);
+        if (tarea == null) return null;
+        if (Database.isAvailable()) return tareaDao.listarParticipantes(id, usuario);
+
+        java.util.Set<String> participantes = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        if (tarea.getPropietario() != null) participantes.add(tarea.getPropietario());
+        for (Map.Entry<String, List<Tarea>> entry : tareasMemoria.entrySet()) {
+            if (entry.getValue().stream().anyMatch(item -> item.getId() == id)) {
+                participantes.add(entry.getKey());
+            }
+        }
+        return new ArrayList<>(participantes);
+    }
+
+    public boolean asignarResponsable(int id, String propietario, String responsable) {
+        if (propietario == null) return false;
+        Tarea tarea = buscarTarea(id, propietario);
+        if (tarea == null || !propietario.equals(tarea.getPropietario())) return false;
+
+        String nombreResponsable = null;
+        if (responsable != null) {
+            Usuario usuarioResponsable = getUsuario(responsable);
+            if (usuarioResponsable == null) return false;
+            String candidato = usuarioResponsable.getNombreUsuario();
+            List<String> participantes = listarParticipantesTarea(id, propietario);
+            if (participantes == null || participantes.stream()
+                    .noneMatch(nombre -> nombre.equalsIgnoreCase(candidato))) return false;
+            nombreResponsable = candidato;
+        }
+
+        if (Database.isAvailable()) return tareaDao.asignarResponsable(id, propietario, nombreResponsable);
+        if (Objects.equals(tarea.getResponsable(), nombreResponsable)) return true;
+        String responsableAnterior = tarea.getResponsable();
+        tarea.setResponsable(nombreResponsable);
+        String detalle = nombreResponsable == null
+            ? "Se retiró el responsable " + responsableAnterior
+            : "Responsable asignado a " + nombreResponsable;
+        registrarHistorial(id, propietario, "RESPONSABLE", detalle);
+        return true;
+    }
+
+    public List<ActividadTarea> listarHistorial(int id, String usuario) {
+        if (usuario == null) return null;
+        if (buscarTarea(id, usuario) == null) return null;
+        if (Database.isAvailable()) return tareaDao.listarHistorial(id, usuario);
+        List<ActividadTarea> historial = historialTareasMemoria.getOrDefault(id, Collections.emptyList());
+        List<ActividadTarea> recientes;
+        synchronized (historial) {
+            recientes = new ArrayList<>(historial);
+        }
+        recientes.sort((a, b) -> Long.compare(b.getId(), a.getId()));
+        return recientes.subList(0, Math.min(20, recientes.size()));
+    }
+
+    public boolean registrarHistorial(int id, String actor, String accion, String detalle) {
+        if (actor == null || accion == null || detalle == null) return false;
+        if (Database.isAvailable()) return tareaDao.registrarHistorial(id, actor, accion, detalle);
+        if (buscarTarea(id, actor) == null) return false;
+        List<ActividadTarea> historial = historialTareasMemoria.computeIfAbsent(
+            id, key -> Collections.synchronizedList(new ArrayList<>()));
+        synchronized (historial) {
+            historial.add(new ActividadTarea(
+                contadorActividad.getAndIncrement(), actor, accion, detalle, Instant.now()));
+            if (historial.size() > 100) historial.remove(0);
+        }
+        return true;
+    }
+
+    private void registrarCambiosTarea(int id, String usuario, Tarea anterior, Tarea cambios) {
+        List<String> campos = new ArrayList<>();
+        if (!Objects.equals(anterior.getTitulo(), cambios.getTitulo())) campos.add("título");
+        if (!Objects.equals(anterior.getDescripcion(), cambios.getDescripcion())) campos.add("descripción");
+        if (anterior.getPrioridad() != cambios.getPrioridad()) campos.add("prioridad");
+        if (!Objects.equals(anterior.getFechaLimite(), cambios.getFechaLimite())) campos.add("fecha límite");
+        if (!Objects.equals(anterior.getInicioProgramado(), cambios.getInicioProgramado())
+                || !Objects.equals(anterior.getFinProgramado(), cambios.getFinProgramado())) {
+            campos.add("bloque horario");
+        }
+        List<String> anteriores = anterior.getSubtareas().stream().map(Subtarea::getTitulo).toList();
+        List<String> nuevas = cambios.getSubtareas().stream().map(Subtarea::getTitulo).toList();
+        if (!anteriores.equals(nuevas)) campos.add("subtareas");
+        if (!campos.isEmpty()) {
+            registrarHistorial(id, usuario, "EDICION", "Se modificó: " + String.join(", ", campos));
+        }
+    }
+
     // ─── Subtareas ───────────────────────────────────────────────────────────
 
     public boolean actualizarSubtarea(int tareaId, String usuario, int subtareaId, boolean completada) {
-        if (Database.isAvailable()) {
-            return tareaDao.actualizarSubtarea(tareaId, usuario, subtareaId, completada);
-        }
-
         Tarea tarea = buscarTarea(tareaId, usuario);
         if (tarea == null) return false;
-        for (Subtarea subtarea : tarea.getSubtareas()) {
-            if (subtarea.getId() == subtareaId) {
-                subtarea.setCompletada(completada);
-                return true;
+        Subtarea objetivo = tarea.getSubtareas().stream()
+            .filter(subtarea -> subtarea.getId() == subtareaId)
+            .findFirst().orElse(null);
+        if (objetivo == null) return false;
+        boolean cambio = objetivo.isCompletada() != completada;
+
+        if (Database.isAvailable()) {
+            boolean ok = tareaDao.actualizarSubtarea(tareaId, usuario, subtareaId, completada);
+            if (ok && cambio) {
+                registrarHistorial(tareaId, usuario, "SUBTAREA",
+                    completada ? "Se completó un paso" : "Se reabrió un paso");
             }
+            return ok;
         }
-        return false;
+
+        objetivo.setCompletada(completada);
+        if (cambio) {
+            registrarHistorial(tareaId, usuario, "SUBTAREA",
+                completada ? "Se completó un paso" : "Se reabrió un paso");
+        }
+        return true;
     }
 }

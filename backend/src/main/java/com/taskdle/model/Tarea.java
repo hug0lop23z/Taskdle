@@ -19,6 +19,7 @@ public abstract class Tarea {
     private FrecuenciaRepeticion frecuenciaRepeticion;
     private boolean repeticionActiva;
     private String propietario;
+    private String responsable;
     private Instant inicioProgramado;
     private Instant finProgramado;
 
@@ -75,6 +76,8 @@ public abstract class Tarea {
     public void setRepeticionActiva(boolean activa) { this.repeticionActiva = activa; }
     public String getPropietario() { return propietario; }
     public void setPropietario(String propietario) { this.propietario = propietario; }
+    public String getResponsable() { return responsable; }
+    public void setResponsable(String responsable) { this.responsable = responsable; }
     public Instant getInicioProgramado() { return inicioProgramado; }
     public void setInicioProgramado(Instant inicioProgramado) { this.inicioProgramado = inicioProgramado; }
     public Instant getFinProgramado() { return finProgramado; }

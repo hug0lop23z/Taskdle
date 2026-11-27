@@ -1308,6 +1308,63 @@
       margin-top: 1.4rem;
     }
 
+    .collaboration-modal .modal-form {
+      display: grid;
+      gap: 1.1rem;
+    }
+
+    .collaboration-assignment h4,
+    .collaboration-history h4 {
+      margin: 0 0 .55rem;
+      font-size: .9rem;
+    }
+
+    .collaboration-assignment-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: .55rem;
+    }
+
+    .collaboration-assignment-row .btn-primary-modal {
+      padding: .65rem .9rem;
+    }
+
+    .collaboration-assignment .form-hint {
+      display: block;
+      margin-top: .5rem;
+    }
+
+    .collaboration-history-list {
+      display: grid;
+      gap: .55rem;
+      max-height: min(38vh, 300px);
+      overflow-y: auto;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .collaboration-history-list li {
+      display: grid;
+      gap: .18rem;
+      padding: .65rem .75rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface2);
+      overflow-wrap: anywhere;
+    }
+
+    .collaboration-history-detail {
+      color: var(--text);
+      font-size: .82rem;
+    }
+
+    .collaboration-history-list small,
+    .collaboration-empty {
+      color: var(--muted);
+      font-size: .72rem;
+    }
+
     #modal-overlay .modal {
       display: flex;
       flex-direction: column;

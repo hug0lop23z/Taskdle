@@ -148,6 +148,36 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="collaboration-modal-overlay">
+    <div class="modal collaboration-modal" role="dialog" aria-modal="true" aria-labelledby="collaboration-title">
+      <div class="modal-header">
+        <div>
+          <h3 id="collaboration-title">Colaboración</h3>
+          <p class="modal-subtitle" id="collaboration-task-title"></p>
+        </div>
+        <button class="btn-close" type="button" onclick="closeCollaborationModal()" aria-label="Cerrar"><svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg></button>
+      </div>
+      <div class="modal-form">
+        <section class="collaboration-assignment">
+          <h4>Responsable</h4>
+          <div class="collaboration-assignment-row">
+            <select id="collaboration-assignee" aria-label="Responsable de la tarea" disabled></select>
+            <button class="btn-primary-modal" id="collaboration-save-btn" type="button" onclick="guardarResponsable()" disabled>Guardar</button>
+          </div>
+          <small class="form-hint" id="collaboration-assignment-hint">Cargando participantes…</small>
+        </section>
+        <div class="err-msg" id="collaboration-error"></div>
+        <section class="collaboration-history">
+          <h4>Historial reciente</h4>
+          <ol id="collaboration-history-list" class="collaboration-history-list"></ol>
+        </section>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" type="button" onclick="closeCollaborationModal()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Dashboard ─────────────────────────────────────────────── -->
   <div id="dashboard-page" data-view="list">
     <header>
