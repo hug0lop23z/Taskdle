@@ -212,42 +212,6 @@ public class ServidorWeb {
             return;
         }
 
-        Matcher mColaboradores = Pattern.compile("/api/tareas/(\\d+)/colaboradores").matcher(path);
-        if ("GET".equals(method) && mColaboradores.matches()) {
-            int id = Integer.parseInt(mColaboradores.group(1));
-            String usuario = queryParam(query, "usuario");
-            if (usuario == null) {
-                respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"Falta el usuario\"}");
-                return;
-            }
-            List<String> participantes = gestor.listarParticipantesTarea(id, usuario);
-            Tarea tarea = gestor.buscarTarea(id, usuario);
-            if (participantes == null || tarea == null) {
-                respond(ex, 404, "application/json", "{\"ok\":false}");
-            } else {
-                String responsable = tarea.getResponsable() == null
-                    ? "null" : "\"" + esc(tarea.getResponsable()) + "\"";
-                respond(ex, 200, "application/json",
-                    "{\"ok\":true,\"editable\":" + usuario.equals(tarea.getPropietario()) +
-                    ",\"responsable\":" + responsable +
-                    ",\"participantes\":" + stringsJson(participantes) + "}");
-            }
-            return;
-        }
-
-        Matcher mHistorial = Pattern.compile("/api/tareas/(\\d+)/historial").matcher(path);
-        if ("GET".equals(method) && mHistorial.matches()) {
-            int id = Integer.parseInt(mHistorial.group(1));
-            String usuario = queryParam(query, "usuario");
-            List<ActividadTarea> historial = gestor.listarHistorial(id, usuario);
-            if (historial == null) {
-                respond(ex, 404, "application/json", "{\"ok\":false}");
-            } else {
-                respond(ex, 200, "application/json", historialJson(historial));
-            }
-            return;
-        }
-
         // POST /api/tareas
         if ("POST".equals(method) && "/api/tareas".equals(path)) {
             String body        = readBody(ex);
@@ -389,34 +353,6 @@ public class ServidorWeb {
             } catch (RuntimeException e) {
                 respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"El inicio y el fin del bloque deben ser válidos y el fin posterior al inicio\"}");
             }
-            return;
-        }
-
-        Matcher mResponsable = Pattern.compile("/api/tareas/(\\d+)/responsable").matcher(path);
-        if ("PUT".equals(method) && mResponsable.matches()) {
-            int id = Integer.parseInt(mResponsable.group(1));
-            String body = readBody(ex);
-            String usuario = extractJson(body, "usuario");
-            String nombreResponsable = extractJson(body, "responsable");
-            if ("null".equals(nombreResponsable) || (nombreResponsable != null && nombreResponsable.isBlank())) {
-                nombreResponsable = null;
-            }
-            if (usuario == null) {
-                respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"Falta el usuario\"}");
-                return;
-            }
-            if (nombreResponsable != null) {
-                Usuario candidato = gestor.getUsuario(nombreResponsable);
-                if (candidato == null) {
-                    respond(ex, 400, "application/json", "{\"ok\":false,\"mensaje\":\"El responsable no existe\"}");
-                    return;
-                }
-                nombreResponsable = candidato.getNombreUsuario();
-            }
-            boolean ok = gestor.asignarResponsable(id, usuario, nombreResponsable);
-            respond(ex, ok ? 200 : 403, "application/json", ok
-                ? "{\"ok\":true}"
-                : "{\"ok\":false,\"mensaje\":\"Solo el propietario puede asignar a alguien con acceso a la tarea\"}");
             return;
         }
 
@@ -659,29 +595,6 @@ public class ServidorWeb {
         return sb.append("]").toString();
     }
 
-    static String stringsJson(List<String> strings) {
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < strings.size(); i++) {
-            if (i > 0) sb.append(",");
-            sb.append("\"").append(esc(strings.get(i))).append("\"");
-        }
-        return sb.append("]").toString();
-    }
-
-    static String historialJson(List<ActividadTarea> historial) {
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < historial.size(); i++) {
-            if (i > 0) sb.append(",");
-            ActividadTarea actividad = historial.get(i);
-            sb.append("{\"id\":").append(actividad.getId())
-              .append(",\"actor\":\"").append(esc(actividad.getActor()))
-              .append("\",\"accion\":\"").append(esc(actividad.getAccion()))
-              .append("\",\"detalle\":\"").append(esc(actividad.getDetalle()))
-              .append("\",\"fecha\":\"").append(actividad.getFecha()).append("\"}");
-        }
-        return sb.append("]").toString();
-    }
-
     static String tareaJson(Tarea t, String usuario) {
         StringBuilder sb = new StringBuilder("{");
         sb.append("\"id\":").append(t.getId()).append(",");
@@ -691,8 +604,6 @@ public class ServidorWeb {
         sb.append("\"prioridad\":\"").append(t.getPrioridad()).append("\",");
         sb.append("\"estado\":\"").append(t.getEstado()).append("\",");
         sb.append("\"editable\":").append(usuario.equals(t.getPropietario())).append(",");
-        sb.append("\"responsable\":").append(t.getResponsable() == null
-            ? "null" : "\"" + esc(t.getResponsable()) + "\"").append(",");
         sb.append("\"fechaCreacion\":\"").append(t.getFechaCreacion().format(FMT)).append("\",");
         sb.append("\"infoAdicional\":\"").append(esc(t.getInfoAdicional())).append("\"");
         if (t instanceof TareaConFechaLimite tcfl) {

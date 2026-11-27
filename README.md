@@ -32,7 +32,6 @@ El flujo de Taskdle ayuda a pasar de una nota rápida a un plan que puedes segui
 - **Programar tareas recurrentes:** repite una tarea cada día, semana o mes; mantiene 12 ocurrencias programadas y añade otra al completar una.
 - **Colaborar y revisar:** comparte tareas, filtra por estado o vencimiento y gestiona varias tareas a la vez.
 - **Compartir por grupos:** crea grupos como Familia o Trabajo, añade amigos registrados y comparte una tarea con todo el grupo.
-- **Coordinar responsabilidades:** asigna cada tarea a su propietario o a una persona con quien ya esté compartida; consulta un historial breve de actividad.
 - **Llevarte la información:** exporta la lista a CSV o imprime y guarda una copia en PDF.
 
 ## Una vista clara del trabajo
@@ -208,7 +207,7 @@ USING (
 );
 ```
 
-Las columnas `inicio_planificado`, `fin_planificado` y `responsable`, además de la tabla `tareas_historial`, se añaden automáticamente al iniciar el backend mediante `schema.sql`. Los bloques de trabajo se consultan y reorganizan desde el calendario interno de Taskdle. El historial conserva eventos de creación, asignación, edición, estado, fechas y subtareas; se muestran los 20 más recientes.
+Las columnas `inicio_planificado` y `fin_planificado` se añaden automáticamente al iniciar el backend mediante `schema.sql`. Los bloques de trabajo se consultan y reorganizan desde el calendario interno de Taskdle.
 
 ## API principal
 
@@ -220,9 +219,6 @@ Las columnas `inicio_planificado`, `fin_planificado` y `responsable`, además de
 | `POST` | `/api/tareas` | Crear una tarea |
 | `PUT` | `/api/tareas/{id}` | Editar una tarea propia y sus subtareas |
 | `PUT` | `/api/tareas/{id}/fecha` | Cambiar la fecha y hora límite de una tarea propia |
-| `PUT` | `/api/tareas/{id}/responsable` | Asignar o retirar un responsable de una tarea propia |
-| `GET` | `/api/tareas/{id}/colaboradores?usuario=...` | Consultar quién tiene acceso a la tarea |
-| `GET` | `/api/tareas/{id}/historial?usuario=...` | Consultar la actividad reciente de una tarea compartida |
 | `PUT` | `/api/tareas/{id}/estado` | Cambiar el estado |
 | `PUT` | `/api/tareas/{id}/repeticion/detener` | Detener una serie recurrente propia |
 | `PUT` | `/api/tareas/{id}/subtarea` | Actualizar una subtarea |

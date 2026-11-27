@@ -31,8 +31,6 @@ ALTER TABLE tareas ADD COLUMN IF NOT EXISTS recurrencia_id INT REFERENCES tareas
 ALTER TABLE tareas ADD COLUMN IF NOT EXISTS indice_recurrencia INT;
 ALTER TABLE tareas ADD COLUMN IF NOT EXISTS inicio_planificado TIMESTAMPTZ;
 ALTER TABLE tareas ADD COLUMN IF NOT EXISTS fin_planificado TIMESTAMPTZ;
-ALTER TABLE tareas ADD COLUMN IF NOT EXISTS responsable VARCHAR(50)
-    REFERENCES usuarios(nombre) ON DELETE SET NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_tareas_recurrencia_indice
     ON tareas(recurrencia_id, indice_recurrencia)
@@ -51,18 +49,6 @@ CREATE TABLE IF NOT EXISTS tareas_compartidas (
     usuario VARCHAR(50) NOT NULL REFERENCES usuarios(nombre) ON DELETE CASCADE,
     PRIMARY KEY (tarea_id, usuario)
 );
-
-CREATE TABLE IF NOT EXISTS tareas_historial (
-    id BIGSERIAL PRIMARY KEY,
-    tarea_id INT NOT NULL REFERENCES tareas(id) ON DELETE CASCADE,
-    actor VARCHAR(50) REFERENCES usuarios(nombre) ON DELETE SET NULL,
-    accion VARCHAR(40) NOT NULL,
-    detalle TEXT NOT NULL,
-    fecha TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_tareas_historial_tarea_fecha
-    ON tareas_historial(tarea_id, fecha DESC);
 
 CREATE TABLE IF NOT EXISTS grupos (
     id SERIAL PRIMARY KEY,

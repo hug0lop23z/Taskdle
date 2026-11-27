@@ -104,7 +104,6 @@
     let isSelectMode = false;
     let groups = [];
     let taskBeingShared = null;
-    let taskForCollaboration = null;
     let editingTaskId = null;
     let draggedTaskId = null;
     let draggedTaskMoveKind = null;
@@ -593,9 +592,6 @@
       if (t.inicioProgramado && t.finProgramado) {
         metaInfo += `<span>${icon('calendar')} Planificada: ${formatDeadline(t.inicioProgramado)}–${formatDeadlineTime(t.finProgramado)}</span>`;
       }
-      if (t.responsable) {
-        metaInfo += `<span>${icon('users')} Responsable: ${escHtml(t.responsable)}</span>`;
-      }
 
       const stateLabel = { PENDIENTE: 'Pendiente', EN_PROGRESO: 'En progreso', COMPLETADA: 'Completada' };
 
@@ -649,9 +645,6 @@
       const recurrenceAction = t.recurrenciaActiva && t.recurrenciaPuedeDetener
         ? `<button class="btn-delete" onclick="detenerRepeticion(${t.id})" title="Detener repetición" aria-label="Detener repetición">${icon('repeat')}</button>`
         : '';
-      const collaborationAction = t.id > 0
-        ? `<button class="btn-delete" onclick="abrirColaboracion(${t.id})" title="Responsable e historial" aria-label="Responsable e historial">${icon('users')}</button>`
-        : '';
       const editAction = t.editable === false ? ''
         : `<button class="btn-delete btn-edit" onclick="editarTarea(${t.id})" title="Editar tarea" aria-label="Editar tarea">${icon('edit')}</button>`;
 
@@ -673,7 +666,6 @@
       </select>
       ${editAction}
       <button class="btn-delete" onclick="compartirTarea(${t.id})" title="Compartir tarea" aria-label="Compartir tarea" style="border-color: var(--primary); color: var(--primary);">${icon('share')}</button>
-      ${collaborationAction}
       ${recurrenceAction}
       <button class="btn-delete" onclick="eliminarTarea(${t.id})" title="Eliminar tarea" aria-label="Eliminar tarea">${icon('trash')}</button>
     </div>
@@ -837,113 +829,6 @@
         }
       } catch (e) {
         toast('Error de conexión', 'error');
-      }
-    }
-
-    async function abrirColaboracion(id) {
-      const task = allTasks.find(item => item.id === id);
-      if (!task) return;
-      taskForCollaboration = id;
-      document.getElementById('collaboration-task-title').textContent = task.titulo;
-      document.getElementById('collaboration-error').classList.remove('visible');
-      document.getElementById('collaboration-modal-overlay').classList.add('open');
-
-      const select = document.getElementById('collaboration-assignee');
-      const saveButton = document.getElementById('collaboration-save-btn');
-      const hint = document.getElementById('collaboration-assignment-hint');
-      const historyList = document.getElementById('collaboration-history-list');
-      select.disabled = true;
-      saveButton.disabled = true;
-      select.innerHTML = '<option value="">Cargando…</option>';
-      historyList.innerHTML = '<li class="collaboration-empty">Cargando historial…</li>';
-
-      try {
-        const [participantsResponse, historyResponse] = await Promise.all([
-          apiFetch(API_BASE + `/api/tareas/${id}/colaboradores?usuario=${encodeURIComponent(currentUser)}`),
-          apiFetch(API_BASE + `/api/tareas/${id}/historial?usuario=${encodeURIComponent(currentUser)}`)
-        ]);
-        const [participantsData, historyData] = await Promise.all([
-          participantsResponse.json(),
-          historyResponse.json()
-        ]);
-        if (!participantsResponse.ok || !participantsData.ok) {
-          throw new Error(participantsData.mensaje || 'No se pudieron cargar los participantes');
-        }
-        if (!historyResponse.ok || !Array.isArray(historyData)) {
-          throw new Error(historyData.mensaje || 'No se pudo cargar el historial');
-        }
-        if (taskForCollaboration !== id) return;
-
-        select.replaceChildren(new Option('Sin responsable', ''));
-        participantsData.participantes.forEach(nombre => {
-          const label = nombre === currentUser ? `${nombre} (tú)` : nombre;
-          select.appendChild(new Option(label, nombre));
-        });
-        select.value = participantsData.responsable || '';
-        select.disabled = !participantsData.editable;
-        saveButton.hidden = !participantsData.editable;
-        saveButton.disabled = !participantsData.editable;
-        hint.textContent = participantsData.editable
-          ? 'Puedes asignar la tarea al propietario o a cualquiera con quien esté compartida.'
-          : 'Solo el propietario puede cambiar el responsable.';
-
-        historyList.replaceChildren();
-        if (historyData.length === 0) {
-          historyList.innerHTML = '<li class="collaboration-empty">Todavía no hay cambios registrados.</li>';
-        } else {
-          historyData.forEach(activity => {
-            const item = document.createElement('li');
-            const detail = document.createElement('span');
-            detail.className = 'collaboration-history-detail';
-            detail.textContent = activity.detalle;
-            const meta = document.createElement('small');
-            const timestamp = new Date(activity.fecha);
-            const formatted = Number.isNaN(timestamp.getTime())
-              ? ''
-              : timestamp.toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
-            meta.textContent = `${activity.actor}${formatted ? ` · ${formatted}` : ''}`;
-            item.append(detail, meta);
-            historyList.appendChild(item);
-          });
-        }
-      } catch (error) {
-        if (taskForCollaboration !== id) return;
-        showErr('collaboration-error', error.message || 'No se pudo cargar la colaboración');
-        historyList.innerHTML = '<li class="collaboration-empty">El historial no está disponible.</li>';
-      }
-    }
-
-    function closeCollaborationModal() {
-      document.getElementById('collaboration-modal-overlay').classList.remove('open');
-      taskForCollaboration = null;
-    }
-
-    async function guardarResponsable() {
-      if (taskForCollaboration === null) return;
-      const id = taskForCollaboration;
-      const button = document.getElementById('collaboration-save-btn');
-      button.disabled = true;
-      document.getElementById('collaboration-error').classList.remove('visible');
-      try {
-        const responsable = document.getElementById('collaboration-assignee').value || null;
-        const response = await apiFetch(API_BASE + `/api/tareas/${id}/responsable`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ usuario: currentUser, responsable })
-        });
-        const data = await response.json();
-        if (!response.ok || !data.ok) {
-          throw new Error(data.mensaje || 'No se pudo guardar el responsable');
-        }
-        await loadTareas();
-        await abrirColaboracion(id);
-        toast('Responsable actualizado', 'success');
-      } catch (error) {
-        showErr('collaboration-error', error.message || 'No se pudo guardar el responsable');
-      } finally {
-        if (taskForCollaboration === id) {
-          button.disabled = document.getElementById('collaboration-assignee').disabled;
-        }
       }
     }
 
@@ -2386,7 +2271,6 @@
       if (e.key === 'Escape' && document.getElementById('modal-overlay').classList.contains('open')) closeModal();
       if (e.key === 'Escape' && document.getElementById('groups-modal-overlay').classList.contains('open')) closeGroupsModal();
       if (e.key === 'Escape' && document.getElementById('share-modal-overlay').classList.contains('open')) closeShareModal();
-      if (e.key === 'Escape' && document.getElementById('collaboration-modal-overlay').classList.contains('open')) closeCollaborationModal();
     });
 
     // ── Restaurar sesión automáticamente al recargar la página ───
