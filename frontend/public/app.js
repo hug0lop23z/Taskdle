@@ -1930,9 +1930,8 @@
       const pill = document.createElement('div');
       const prio = task.prioridad.toLowerCase();
       const done = task.estado === 'COMPLETADA';
-      const deadlineMarker = moveKind === 'deadline';
-      pill.className = `cal-pill ${prio}${done ? ' completada' : ''}${deadlineMarker ? ' deadline-marker' : ''}`;
-      pill.title = deadlineMarker ? `Fecha límite: ${task.titulo}` : task.titulo;
+      pill.className = `cal-pill ${prio}${done ? ' completada' : ''}`;
+      pill.title = task.titulo;
       enableCalendarTaskInteractions(pill, task, true, moveKind);
 
       const title = document.createElement('span');
@@ -1994,7 +1993,7 @@
         const item = document.createElement('li');
         const calendarEntry = task.task ? task : { task, kind: task.inicioProgramado ? 'planned' : 'deadline' };
         const entryTask = calendarEntry.task;
-        item.className = `cal-more-item ${String(entryTask.prioridad || '').toLowerCase()}${calendarEntry.kind === 'deadline' ? ' deadline-marker' : ''}`;
+        item.className = `cal-more-item ${String(entryTask.prioridad || '').toLowerCase()}`;
         item.dataset.taskId = String(entryTask.id);
         const title = document.createElement('span');
         title.className = 'cal-more-task-title';
